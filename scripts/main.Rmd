@@ -1,0 +1,153 @@
+```{r, echo=FALSE, include=FALSE}
+library(dplyr)
+library(ggplot2)
+library(viridis)
+```
+
+# Baza danych
+  Baza danych **AutoSprzedam.dat**. Baza pochodzi z zasobów zgormadzonych na ePortalu.
+
+## Zawartość
+  Baza danych zawiera 41034 rekordów zawierających szczegółowe dane dotyczące sprzedaży samochodów m.in.
+
+  <p style="text-align:center;">
+  | Kolumna            | Typ danych | Opis                                                                                      |
+  |--------------------|------------|-------------------------------------------------------------------------------------------|
+  | NrOferty           | int        | Numer oferty sprzedaży samochodu.                                                        |
+  | CenaPLN            | string      | Cena samochodu wyrażona w polskich złotych (PLN).                                         |
+  | KM                 | int        | Liczba koni mechanicznych samochodu.                                                      |
+  | Marka              | string     | Marka samochodu.                                                                          |
+  | Model              | string     | Model samochodu.                                                                          |
+  | LiczbaDrzwi       | string        | Liczba drzwi w samochodzie.                                                               |
+  | PojemnoscSkokowa  | int      | Pojemność skokowa silnika wyrażona w centymetrach sześciennych (cm³).                      |
+  | PrzebiegKm         | int        | Przebieg samochodu wyrażony w kilometrach.                                                |
+  | RodzajPaliwa      | string     | Rodzaj paliwa używanego przez samochód (benzyna, diesel, hybryda, elektryczny itp.).      |
+  | RokProdukcji       | int        | Rok produkcji samochodu.                                                                  |
+  | Kolor              | string     | Kolor samochodu.                                                                          |
+  | KrajPochodzenia    | string     | Kraj pochodzenia samochodu.                                                               |
+  | PojazdUszkodzony  | string       | Informacja czy pojazd jest uszkodzony (Tak/Nie).                                           |
+  | SkrzyniaBiegow     | string     | Typ skrzyni biegów w samochodzie (manualna, automatyczna).                                  |
+  </p>
+  
+## Podstawowe dana dotyczące bazy danych
+```{r, echo=FALSE, include=TRUE}
+database = read.csv("../database/AutoSprzedam.dat", sep = "\t", dec = ',');
+N = 5;
+cat("Liczba rekordów:", nrow(database), ", liczba kolumn:", ncol(database), "\n\n")
+
+cat("-", "Przykład ", N, "pierwszych rekordów.\n")
+head(database, N);
+cat("- ", "Przykład ", N, "ostatnich rekordów.\n")
+tail(database, N);
+```
+
+# Przygotowanie bazy danych
+  Przed przejściem do dalszej pracy z bazą danych konieczne jest ich przygotowanie.
+
+## Przekształcenie pola *SkrzyniaBiegow*
+  - Usuwamy samochody z typem skrzyni *półautomatyczna/sekwencyjna* 
+  - Usunięcie dodatkowego typu pazwala wprowadzić zmianę na typ bool
+```{r, echo=FALSE, include=TRUE}
+gear_box_summary = database %>% group_by(database$SkrzyniaBiegow) %>% summarise(liczba = n());
+gear_box_summary
+cat("Udział pojazdów ze skrzynią biegów typu 'półautomatyczna/sekwencyjna'", sum(gear_box_summary[3,2])/sum(gear_box_summary[,2])*100, "%.")
+
+# Remove cars with database$SkrzyniaBiegow == 'półautomatyczna/sekwencyjna'
+database = database[database$SkrzyniaBiegow != "półautomatyczna/sekwencyjna",]
+
+# Cast to logical value
+database$SkrzyniaBiegow = database$SkrzyniaBiegow == "manualna"
+colnames(database)
+colnames(database)[14] = "SkrzyniaBiegowManualna"
+
+cat("Baza danych po wprowadzonych modyfikacjach")
+cat("Liczba rekordów:", nrow(database), ", liczba kolumn:", ncol(database), "\n\n")
+cat("-", "Przykład ", N, "pierwszych rekordów.\n")
+head(database, N);
+cat("-", "Przykład ", N, "ostatnich rekordów.\n")
+tail(database, N);
+
+```
+## Przekształcenie pola *PojazdUszkodzony*
+  Zmiana polega na przekształceniu typu danych *char* na typ *boolean*.
+```{r}
+database$PojazdUszkodzony = database$PojazdUszkodzony == "Tak"
+```
+
+# Wyznaczenie podstawowych statystyk
+
+## Cena sprzedaży
+
+### Dane przed eliminacją danych odstających
+```{r}
+summarise(database,
+  srednia = mean(CenaPLN),
+  mediana = median(CenaPLN),
+  wariancja = var(CenaPLN),
+  odchylenieStd = sd(CenaPLN),
+  max = max(CenaPLN),
+  min = min(CenaPLN),
+)
+
+ggplot(data=database) + geom_histogram(aes(x=CenaPLN), bins = 50) + ggtitle("Histogram dla cen sprzedaży");
+
+ggplot(data=database) + geom_boxplot(aes(x=CenaPLN)) + ggtitle("Wykres pudełko-wąsy dla cen sprzedaży");
+
+ggplot(data=database, aes(sample = CenaPLN)) + stat_qq() + stat_qq_line(colour="red") + ylab("Kwantyl Teoretyczny") + xlab("Kwantyl Empiryczny") + 
+  ggtitle("Wykres QQ dla cen sprzedaży") + theme(axis.text.x = element_blank(), axis.text.y = element_blank()) ;
+```
+### Redukcja danych odstających
+Do redukcji danych wykorzystno regółę 3 sigma.
+```{r}
+mean_price = mean(database$CenaPLN);
+sd_price   = sd(database$CenaPLN);
+
+lower_bound <- mean_price - 3 * sd_price;
+upper_bound <- mean_price + 3 * sd_price;
+
+database = database[database$CenaPLN >= lower_bound & database$CenaPLN <= upper_bound,]
+```
+### Dane po eliminacją danych odstających
+```{r}
+summarise(database,
+  srednia = mean(CenaPLN),
+  mediana = median(CenaPLN),
+  wariancja = var(CenaPLN),
+  odchylenieStd = sd(CenaPLN),
+  max = max(CenaPLN),
+  min = min(CenaPLN),
+)
+
+ggplot(data=database) + geom_histogram(aes(x=CenaPLN), bins = 50) + ggtitle("Histogram dla cen sprzedaży");
+
+ggplot(data=database) + geom_boxplot(aes(x=CenaPLN)) + ggtitle("Wykres pudełko-wąsy dla cen sprzedaży");
+
+ggplot(data=database, aes(sample = CenaPLN)) + stat_qq() + stat_qq_line(colour="red") + ylab("Kwantyl Teoretyczny") + xlab("Kwantyl Empiryczny") + 
+  ggtitle("Wykres QQ dla cen sprzedaży") + theme(axis.text.x = element_blank(), axis.text.y = element_blank()) ;
+```
+
+
+```{r}
+fuelType = database %>% group_by(database$RodzajPaliwa) %>% summarise(liczba = n());
+colnames(fuelType) = c("FuelType", "Count");
+fuelType
+
+ggplot(fuelType, aes(x="", y=Count, fill=FuelType)) +
+  geom_bar(stat="identity", width=1, color="white") +
+  coord_polar("y", start=0) + theme_void();
+  
+```
+## Liczba koni mechanicznych samochodu
+
+```{r}
+summarise(database,
+  srednia = mean(KM),
+  mediana = median(KM),
+  wariancja = var(KM),
+  odchylenieStd = sd(KM),
+  max = max(KM),
+  min = min(KM),
+)
+
+ggplot(data=database)+ geom_histogram(aes(x=KM), binwidth = 20) + ggtitle("Histogram dla KM")
+```
