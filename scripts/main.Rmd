@@ -1,4 +1,5 @@
 ```{r, echo=FALSE, include=FALSE}
+#install.packages("viridis")
 library(dplyr)
 library(ggplot2)
 library(viridis)
@@ -44,37 +45,51 @@ tail(database, N);
 # Przygotowanie bazy danych
   Przed przejściem do dalszej pracy z bazą danych konieczne jest ich przygotowanie.
 
-## Przekształcenie pola *SkrzyniaBiegow*
-  - Usuwamy samochody z typem skrzyni *półautomatyczna/sekwencyjna* 
-  - Usunięcie dodatkowego typu pazwala wprowadzić zmianę na typ bool
+## Pole - *SkrzyniaBiegow*
+  W bazie występują 3 rodzaje typów skrzyni biegów: *półautomatyczna/sekwencyjna*, *manualna* oraz *automatyczna*.
+  Udział typu *półautomatyczna/sekwencyjna* w całej bazie wynosi 1,5%.
+  
+  W związku z niewielkim udziałem ze skrzynią *półautomatyczna/sekwencyjna*, typ ten został usunięty z bazy. 
+  Dzięki czemu możliwe jest przekształcenie kolumny *SkrzyniaBiegow* (char), na *SkrzyniaBiegowManualna* (bool).
 ```{r, echo=FALSE, include=TRUE}
 gear_box_summary = database %>% group_by(database$SkrzyniaBiegow) %>% summarise(liczba = n());
 gear_box_summary
-cat("Udział pojazdów ze skrzynią biegów typu 'półautomatyczna/sekwencyjna'", sum(gear_box_summary[3,2])/sum(gear_box_summary[,2])*100, "%.")
+cat("Udział pojazdów ze skrzynią biegów typu 'półautomatyczna/sekwencyjna'", sum(gear_box_summary[3,2])/sum(gear_box_summary[,2])*100, "%.");
 
 # Remove cars with database$SkrzyniaBiegow == 'półautomatyczna/sekwencyjna'
-database = database[database$SkrzyniaBiegow != "półautomatyczna/sekwencyjna",]
+database = database[database$SkrzyniaBiegow != "półautomatyczna/sekwencyjna",];
 
 # Cast to logical value
-database$SkrzyniaBiegow = database$SkrzyniaBiegow == "manualna"
-colnames(database)
-colnames(database)[14] = "SkrzyniaBiegowManualna"
-
-cat("Baza danych po wprowadzonych modyfikacjach")
-cat("Liczba rekordów:", nrow(database), ", liczba kolumn:", ncol(database), "\n\n")
-cat("-", "Przykład ", N, "pierwszych rekordów.\n")
-head(database, N);
-cat("-", "Przykład ", N, "ostatnich rekordów.\n")
-tail(database, N);
-
+database$SkrzyniaBiegow = database$SkrzyniaBiegow == "manualna";
+colnames(database)[14] = "SkrzyniaBiegowManualna";
 ```
-## Przekształcenie pola *PojazdUszkodzony*
-  Zmiana polega na przekształceniu typu danych *char* na typ *boolean*.
-```{r}
+## Pole *PojazdUszkodzony*
+  Domyślnym typem danych dla pola *PojazdUszkodzony* jest (char), gdzie zmienna jest typem logicznym.
+  W związku z powyższym kolumna *PojazdUszkodzony* została przekształcona to typu *bool*.
+```{r, echo=FALSE, include=TRUE}
 database$PojazdUszkodzony = database$PojazdUszkodzony == "Tak"
 ```
 
+## Baza danych po wprowadzonych modyfikacjach
+```{r, echo=FALSE, include=TRUE}
+cat("Baza danych po wprowadzonych modyfikacjach");
+cat("Liczba rekordów:", nrow(database), ", liczba kolumn:", ncol(database), "\n\n");
+cat("-", "Przykład ", N, "pierwszych rekordów.\n");
+head(database, N);
+cat("-", "Przykład ", N, "ostatnich rekordów.\n");
+tail(database, N);
+```
+
+
 # Wyznaczenie podstawowych statystyk
+
+## Pole *CenaPLN*
+  Kolumna zawiera informacje o cenie po jakie asmochody zostału sprzedane w PLN.
+  
+### Dane  
+
+
+
 
 ## Cena sprzedaży
 

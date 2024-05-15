@@ -498,14 +498,17 @@ elektryczny itp.).</td>
 <h1>Przygotowanie bazy danych</h1>
 <p>Przed przejściem do dalszej pracy z bazą danych konieczne jest ich
 przygotowanie.</p>
-<div id="przekształcenie-pola-skrzyniabiegow" class="section level2">
-<h2>Przekształcenie pola <em>SkrzyniaBiegow</em></h2>
-<ul>
-<li>Usuwamy samochody z typem skrzyni
-<em>półautomatyczna/sekwencyjna</em></li>
-<li>Usunięcie dodatkowego typu pazwala wprowadzić zmianę na typ
-bool</li>
-</ul>
+<div id="pole---skrzyniabiegow" class="section level2">
+<h2>Pole - <em>SkrzyniaBiegow</em></h2>
+<p>W bazie występują 3 rodzaje typów skrzyni biegów:
+<em>półautomatyczna/sekwencyjna</em>, <em>manualna</em> oraz
+<em>automatyczna</em>. Udział typu <em>półautomatyczna/sekwencyjna</em>
+w całej bazie wynosi 1,5%.</p>
+<p>W związku z niewielkim udziałem ze skrzynią
+<em>półautomatyczna/sekwencyjna</em>, typ ten został usunięty z bazy.
+Dzięki czemu możliwe jest przekształcenie kolumny
+<em>SkrzyniaBiegow</em> (char), na <em>SkrzyniaBiegowManualna</em>
+(bool).</p>
 <pre><code>## # A tibble: 3 × 2
 ##   `database$SkrzyniaBiegow`   liczba
 ##   &lt;chr&gt;                        &lt;int&gt;
@@ -513,10 +516,16 @@ bool</li>
 ## 2 manualna                     34030
 ## 3 półautomatyczna/sekwencyjna     63</code></pre>
 <pre><code>## Udział pojazdów ze skrzynią biegów typu &#39;półautomatyczna/sekwencyjna&#39; 0.1535312 %.</code></pre>
-<pre><code>##  [1] &quot;NrOferty&quot;         &quot;CenaPLN&quot;          &quot;KM&quot;               &quot;Marka&quot;           
-##  [5] &quot;Model&quot;            &quot;LiczbaDrzwi&quot;      &quot;PojemnoscSkokowa&quot; &quot;PrzebiegKm&quot;      
-##  [9] &quot;RodzajPaliwa&quot;     &quot;RokProdukcji&quot;     &quot;Kolor&quot;            &quot;KrajPochodzenia&quot; 
-## [13] &quot;PojazdUszkodzony&quot; &quot;SkrzyniaBiegow&quot;</code></pre>
+</div>
+<div id="pole-pojazduszkodzony" class="section level2">
+<h2>Pole <em>PojazdUszkodzony</em></h2>
+<p>Domyślnym typem danych dla pola <em>PojazdUszkodzony</em> jest
+(char), gdzie zmienna jest typem logicznym. W związku z powyższym
+kolumna <em>PojazdUszkodzony</em> została przekształcona to typu
+<em>bool</em>.</p>
+</div>
+<div id="baza-danych-po-wprowadzonych-modyfikacjach" class="section level2">
+<h2>Baza danych po wprowadzonych modyfikacjach</h2>
 <pre><code>## Baza danych po wprowadzonych modyfikacjach</code></pre>
 <pre><code>## Liczba rekordów: 40971 , liczba kolumn: 14</code></pre>
 <pre><code>## - Przykład  5 pierwszych rekordów.</code></pre>
@@ -533,11 +542,11 @@ bool</li>
 ## 4      42000 olej napędowy (diesel)         2005           czerwony
 ## 5     169000                benzyna         2004 granatowy-metallic
 ##   KrajPochodzenia PojazdUszkodzony SkrzyniaBiegowManualna
-## 1          Niemcy              Nie                   TRUE
-## 2          Polska              Nie                   TRUE
-## 3          Polska              Nie                   TRUE
-## 4          Polska              Nie                   TRUE
-## 5         Francja              Nie                   TRUE</code></pre>
+## 1          Niemcy            FALSE                   TRUE
+## 2          Polska            FALSE                   TRUE
+## 3          Polska            FALSE                   TRUE
+## 4          Polska            FALSE                   TRUE
+## 5         Francja            FALSE                   TRUE</code></pre>
 <pre><code>## - Przykład  5 ostatnich rekordów.</code></pre>
 <pre><code>##       NrOferty  CenaPLN  KM         Marka    Model LiczbaDrzwi PojemnoscSkokowa
 ## 41030    41030 98000.00 220          Opel Insignia         4/5             1998
@@ -552,17 +561,11 @@ bool</li>
 ## 41033      45000 olej napędowy (diesel)         2010    czarny-metallic
 ## 41034     191024 olej napędowy (diesel)         2003    czarny-metallic
 ##       KrajPochodzenia PojazdUszkodzony SkrzyniaBiegowManualna
-## 41030          Polska              Nie                   TRUE
-## 41031          Czechy              Nie                  FALSE
-## 41032          Niemcy              Nie                   TRUE
-## 41033          Belgia              Nie                   TRUE
-## 41034          Niemcy              Nie                   TRUE</code></pre>
-</div>
-<div id="przekształcenie-pola-pojazduszkodzony" class="section level2">
-<h2>Przekształcenie pola <em>PojazdUszkodzony</em></h2>
-<p>Zmiana polega na przekształceniu typu danych <em>char</em> na typ
-<em>boolean</em>.</p>
-<pre class="r"><code>database$PojazdUszkodzony = database$PojazdUszkodzony == &quot;Tak&quot;</code></pre>
+## 41030          Polska            FALSE                   TRUE
+## 41031          Czechy            FALSE                  FALSE
+## 41032          Niemcy            FALSE                   TRUE
+## 41033          Belgia            FALSE                   TRUE
+## 41034          Niemcy            FALSE                   TRUE</code></pre>
 </div>
 </div>
 <div id="wyznaczenie-podstawowych-statystyk" class="section level1">
