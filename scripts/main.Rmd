@@ -112,7 +112,16 @@ ggplot(data=database, aes(sample = CenaPLN)) + stat_qq() + stat_qq_line(colour="
   ggtitle("Wykres QQ dla cen sprzedaży") + theme(axis.text.x = element_blank(), axis.text.y = element_blank()) ;
 ```
 ### Redukcja danych odstających
-Do redukcji danych wykorzystno regółę 3 sigma.
+Redukcja danych zgodnie z regółą 3 sigma. 
+
+Identyfikacja danych odstających za pomocą reguły trzech sigm:
+
+1. Obliczenie średniej (μ): Najpierw oblicza się średnią dla danego zbioru danych.
+
+2. Obliczenie odchylenia standardowego (σ): Następnie oblicza się odchylenie standardowe, które mierzy, jak bardzo dane rozpraszają się wokół średniej.
+
+3. Ustalenie zakresu trzech sigm: Wartości, które znajdują się poza zakresem trzech sigm (μ ± 3σ), są uznawane za dane odstające.
+
 ```{r}
 mean_price = mean(database$CenaPLN);
 sd_price   = sd(database$CenaPLN);
@@ -120,8 +129,15 @@ sd_price   = sd(database$CenaPLN);
 lower_bound <- mean_price - 3 * sd_price;
 upper_bound <- mean_price + 3 * sd_price;
 
+cat("Wyznacznowe granice metodą 3 sigma")
+cat("Dolna granica ", lower_bound, ", górna granica ", upper_bound);
+
+upper_price_example = database[which(database$CenaPLN >= upper_bound),];
+head(upper_price_example[order(upper_price_example$CenaPLN, decreasing = TRUE),])
+
 database = database[database$CenaPLN >= lower_bound & database$CenaPLN <= upper_bound,]
 ```
+Dolna granica wykracza poza osiągane wartości kwot sprzedaży (ujemna wartość).
 ### Dane po eliminacją danych odstających
 ```{r}
 summarise(database,
