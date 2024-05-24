@@ -1,8 +1,12 @@
 ```{r, echo=FALSE, include=FALSE}
 #install.packages("viridis")
+#install.packages("moments")
 library(dplyr)
 library(ggplot2)
 library(viridis)
+library(moments)
+library(psych)
+library(moments)
 ```
 
 # Baza danych
@@ -83,6 +87,42 @@ tail(database, N);
 
 # Wyznaczenie podstawowych statystyk
 
+```{r}
+stats <- function(x){
+  c(
+    mean(x),                # średnia arytmetyczna
+    harmonic.mean(x),       # średnia harmoniczna
+    exp(mean(log(x))),      # średnia geometryczna
+    quantile(x, 0.25)->q1,  # pierwszy kwartyl
+    quantile(x, 0.5),       # mediana
+    quantile(x, 0.75)->q3,  # trzeci kwartyl
+    q3-q1,                  # rozstęp międzykwartylowy
+    max(x)-min(x),          # rozstęp
+    var(x),                 # wariancja
+    sqrt(var(x)),           # odchylenie standardowe
+    sqrt(var(x))/mean(x),   # współczynnik zmienności
+    skewness(x),            # współczynnik skośności
+    kurtosis(x),            # kurtoza
+    max(x),                 # wartosc maksymalna
+    min(x)                  # wartosc minimalna
+  )
+}
+
+StatsNames <- c("Średnia arytmetyczna", "Średnia harmoniczna", "Średnia geometryczna", "Pierwszy kwartyl",
+                "Mediana", "Trzeci kwartyl", "Rozstęp międzykwartylowy", "Rozstęp", "Wariancja",
+                "Odchylenie standardowe", "Współczynnik zmienności", "Współczynnik skośności", "Kurtoza", "Max", "Min");
+
+numerical_statistics <- data.frame("Statystyki" = StatsNames, 
+           "Cena" = stats(database$CenaPLN), 
+           "KM" = stats(database$KM), 
+           "Pojemność" = stats(database$PojemnoscSkokowa), 
+           "Przebieg" = stats(database$CenaPLN),
+           "RokProdukcji"= stats(database$RokProdukcji));
+
+numerical_statistics
+```
+
+
 ## Pole *CenaPLN*
   Kolumna zawiera informacje o cenie po jakie asmochody zostału sprzedane w PLN.
   
@@ -95,14 +135,7 @@ tail(database, N);
 
 ### Dane przed eliminacją danych odstających
 ```{r}
-summarise(database,
-  srednia = mean(CenaPLN),
-  mediana = median(CenaPLN),
-  wariancja = var(CenaPLN),
-  odchylenieStd = sd(CenaPLN),
-  max = max(CenaPLN),
-  min = min(CenaPLN),
-)
+ 
 
 ggplot(data=database) + geom_histogram(aes(x=CenaPLN), bins = 50) + ggtitle("Histogram dla cen sprzedaży");
 
