@@ -776,6 +776,107 @@ oraz odwrotnie z <em>PrzebiegKM</em>,<br />
 jest odwrotnie skorelowany z <em>RokProdukcji</em> (starszy samochód
 -&gt; większy przebieg).</p>
 </div>
+<div id="vii---przedziały-ufności" class="section level1">
+<h1>VII - Przedziały ufności</h1>
+<pre class="r"><code># Data
+vii_price = database$CenaPLN;
+
+# Basic statistics
+vii_price_mean = mean(vii_price);
+vii_price_sd = sd(vii_price);
+n = length(vii_price);
+
+# Mean confidence function
+mean_confidence &lt;- function(mean, sd, n, confidence_level) {
+  alpha = 1 - confidence_level;
+  offset = qnorm(1 - alpha / 2) * sd / sqrt(n);
+  lower_bound = mean - offset;
+  upper_bound = mean + offset;
+  return(c(lower_bound, upper_bound));
+};
+
+# Confidence level 0.9, 0.95, 0.99
+confidence_level = c(0.9, 0.95, 0.99);
+
+mean_confidence_intervals = sapply(confidence_level, function(conf_level) {
+  mean_confidence(vii_price_mean, vii_price_sd, n, conf_level)
+});
+
+# Create matrix
+mean_confidence_intervals = t(mean_confidence_intervals);
+rownames(mean_confidence_intervals) = paste0(&quot;Poziom ufności: &quot;, confidence_level);
+colnames(mean_confidence_intervals) = c(&quot;Dolny przedział&quot;, &quot;Górny przedział&quot;);
+
+# Display
+print(&quot;Przedziały ufności średniej dla różnych poziomów ufności:&quot;);</code></pre>
+<pre><code>## [1] &quot;Przedziały ufności średniej dla różnych poziomów ufności:&quot;</code></pre>
+<pre class="r"><code>print(mean_confidence_intervals);</code></pre>
+<pre><code>##                      Dolny przedział Górny przedział
+## Poziom ufności: 0.9         34385.45        34870.53
+## Poziom ufności: 0.95        34338.99        34916.99
+## Poziom ufności: 0.99        34248.18        35007.81</code></pre>
+<pre class="r"><code># SD confidence function
+sd_confidence &lt;- function(mean, n, confidence_level) {
+  alpha = 1 - confidence_level;
+  offset = qnorm(1 - alpha / 2) / sqrt(2*n);
+  lower_bound = mean / (1 + offset);
+  upper_bound = mean / (1 - offset);
+  return(c(lower_bound, upper_bound));
+};
+
+sd_confidence_intervals = sapply(confidence_level, function(conf_level) {
+  sd_confidence(vii_price_mean, n, conf_level);
+});
+
+# Create matrix
+sd_confidence_intervals = t(sd_confidence_intervals);
+rownames(sd_confidence_intervals) = paste0(&quot;Poziom ufności: &quot;, confidence_level);
+colnames(sd_confidence_intervals) = c(&quot;Dolny przedział&quot;, &quot;Górny przedział&quot;);
+
+# Display
+print(&quot;Przedziały ufności odchylenia standardowego dla różnych poziomów ufności:&quot;);</code></pre>
+<pre><code>## [1] &quot;Przedziały ufności odchylenia standardowego dla różnych poziomów ufności:&quot;</code></pre>
+<pre class="r"><code>print(sd_confidence_intervals);</code></pre>
+<pre><code>##                      Dolny przedział Górny przedział
+## Poziom ufności: 0.9         34427.63        34830.70
+## Poziom ufności: 0.95        34389.51        34869.81
+## Poziom ufności: 0.99        34315.25        34946.49</code></pre>
+<div id="przedział-ufności-dla-rozkładu-bernoulliego" class="section level2">
+<h2>Przedział ufności dla rozkładu Bernoulliego</h2>
+<pre class="r"><code>vii_positive = sum(database$PojazdUszkodzony == TRUE);
+vii_all      = length(database$PojazdUszkodzony);
+
+mean_bool_confidence &lt;- function(m, n, confidence_level) {
+  alpha = 1 - confidence_level;
+  mn = m / n;
+  offset = qnorm(1 - alpha / 2) * sqrt(mn * (1-mn)) / sqrt(n);
+  lower_bound = mn - offset;
+  upper_bound = mn + offset;
+  return(c(lower_bound, upper_bound));
+};
+
+# Confidence level 0.9, 0.95, 0.99
+confidence_level = c(0.9, 0.95, 0.99);
+
+confidence_intervals = sapply(confidence_level, function(conf_level) {
+  mean_bool_confidence(vii_positive, vii_all, conf_level);
+});
+
+# Create matrix
+confidence_intervals = t(confidence_intervals);
+rownames(confidence_intervals) = paste0(&quot;Poziom ufności: &quot;, confidence_level);
+colnames(confidence_intervals) = c(&quot;Dolny przedział&quot;, &quot;Górny przedział&quot;);
+
+# Display
+print(&quot;Przedziały ufności dla frakcjidla różnych poziomów ufności (Udział pojazdów uszkodzonych):&quot;);</code></pre>
+<pre><code>## [1] &quot;Przedziały ufności dla frakcjidla różnych poziomów ufności (Udział pojazdów uszkodzonych):&quot;</code></pre>
+<pre class="r"><code>print(confidence_intervals);</code></pre>
+<pre><code>##                      Dolny przedział Górny przedział
+## Poziom ufności: 0.9       0.03533003      0.03843246
+## Poziom ufności: 0.95      0.03503286      0.03872963
+## Poziom ufności: 0.99      0.03445206      0.03931043</code></pre>
+</div>
+</div>
 
 
 

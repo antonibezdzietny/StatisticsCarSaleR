@@ -221,3 +221,93 @@ Jak można zaobserwować:
 - *CenaPLN* skorelowana jest z *RokProdukcji* (silnie), *KM*, *PojemnoscSkokowa* oraz odwrotnie z *PrzebiegKM*,  
 - *PojemnoscSkokowa* jest silnie skorelowana z ilością *KM* (większa pojemność -> więcej KM),
 - *PrzebiegKM* jest odwrotnie skorelowany z *RokProdukcji* (starszy samochód -> większy przebieg).
+
+# VII - Przedziały ufności
+```{r}
+# Data
+vii_price = database$CenaPLN;
+
+# Basic statistics
+vii_price_mean = mean(vii_price);
+vii_price_sd = sd(vii_price);
+n = length(vii_price);
+
+# Mean confidence function
+mean_confidence <- function(mean, sd, n, confidence_level) {
+  alpha = 1 - confidence_level;
+  offset = qnorm(1 - alpha / 2) * sd / sqrt(n);
+  lower_bound = mean - offset;
+  upper_bound = mean + offset;
+  return(c(lower_bound, upper_bound));
+};
+
+# Confidence level 0.9, 0.95, 0.99
+confidence_level = c(0.9, 0.95, 0.99);
+
+mean_confidence_intervals = sapply(confidence_level, function(conf_level) {
+  mean_confidence(vii_price_mean, vii_price_sd, n, conf_level)
+});
+
+# Create matrix
+mean_confidence_intervals = t(mean_confidence_intervals);
+rownames(mean_confidence_intervals) = paste0("Poziom ufności: ", confidence_level);
+colnames(mean_confidence_intervals) = c("Dolny przedział", "Górny przedział");
+
+# Display
+print("Przedziały ufności średniej dla różnych poziomów ufności:");
+print(mean_confidence_intervals);
+
+
+# SD confidence function
+sd_confidence <- function(mean, n, confidence_level) {
+  alpha = 1 - confidence_level;
+  offset = qnorm(1 - alpha / 2) / sqrt(2*n);
+  lower_bound = mean / (1 + offset);
+  upper_bound = mean / (1 - offset);
+  return(c(lower_bound, upper_bound));
+};
+
+sd_confidence_intervals = sapply(confidence_level, function(conf_level) {
+  sd_confidence(vii_price_mean, n, conf_level);
+});
+
+# Create matrix
+sd_confidence_intervals = t(sd_confidence_intervals);
+rownames(sd_confidence_intervals) = paste0("Poziom ufności: ", confidence_level);
+colnames(sd_confidence_intervals) = c("Dolny przedział", "Górny przedział");
+
+# Display
+print("Przedziały ufności odchylenia standardowego dla różnych poziomów ufności:");
+print(sd_confidence_intervals);
+```
+
+## Przedział ufności dla rozkładu Bernoulliego
+```{r}
+vii_positive = sum(database$PojazdUszkodzony == TRUE);
+vii_all      = length(database$PojazdUszkodzony);
+
+mean_bool_confidence <- function(m, n, confidence_level) {
+  alpha = 1 - confidence_level;
+  mn = m / n;
+  offset = qnorm(1 - alpha / 2) * sqrt(mn * (1-mn)) / sqrt(n);
+  lower_bound = mn - offset;
+  upper_bound = mn + offset;
+  return(c(lower_bound, upper_bound));
+};
+
+# Confidence level 0.9, 0.95, 0.99
+confidence_level = c(0.9, 0.95, 0.99);
+
+confidence_intervals = sapply(confidence_level, function(conf_level) {
+  mean_bool_confidence(vii_positive, vii_all, conf_level);
+});
+
+# Create matrix
+confidence_intervals = t(confidence_intervals);
+rownames(confidence_intervals) = paste0("Poziom ufności: ", confidence_level);
+colnames(confidence_intervals) = c("Dolny przedział", "Górny przedział");
+
+# Display
+print("Przedziały ufności dla frakcjidla różnych poziomów ufności (Udział pojazdów uszkodzonych):");
+print(confidence_intervals);
+```
