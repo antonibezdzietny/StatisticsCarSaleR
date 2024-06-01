@@ -1,12 +1,10 @@
 ```{r, echo=FALSE, include=FALSE}
 #install.packages("viridis")
-#install.packages("moments")
+#install.packages("corrplot")
 library(dplyr)
 library(ggplot2)
 library(viridis)
-library(moments)
-library(psych)
-library(moments)
+library(corrplot)
 ```
 
 # Baza danych
@@ -47,7 +45,7 @@ tail(database, N);
 ```
 
 # Przygotowanie bazy danych
-  Przed przejściem do dalszej pracy z bazą danych konieczne jest ich przygotowanie.
+  Przed przejściem do dalszej pracy z bazą danych konieczne jest jej przygotowanie.
 
 ## Pole - *SkrzyniaBiegow*
   W bazie występują 3 rodzaje typów skrzyni biegów: *półautomatyczna/sekwencyjna*, *manualna* oraz *automatyczna*.
@@ -87,55 +85,20 @@ tail(database, N);
 
 # Wyznaczenie podstawowych statystyk
 
-```{r}
-stats <- function(x){
-  c(
-    mean(x),                # średnia arytmetyczna
-    harmonic.mean(x),       # średnia harmoniczna
-    exp(mean(log(x))),      # średnia geometryczna
-    quantile(x, 0.25)->q1,  # pierwszy kwartyl
-    quantile(x, 0.5),       # mediana
-    quantile(x, 0.75)->q3,  # trzeci kwartyl
-    q3-q1,                  # rozstęp międzykwartylowy
-    max(x)-min(x),          # rozstęp
-    var(x),                 # wariancja
-    sqrt(var(x)),           # odchylenie standardowe
-    sqrt(var(x))/mean(x),   # współczynnik zmienności
-    skewness(x),            # współczynnik skośności
-    kurtosis(x),            # kurtoza
-    max(x),                 # wartosc maksymalna
-    min(x)                  # wartosc minimalna
-  )
-}
-
-StatsNames <- c("Średnia arytmetyczna", "Średnia harmoniczna", "Średnia geometryczna", "Pierwszy kwartyl",
-                "Mediana", "Trzeci kwartyl", "Rozstęp międzykwartylowy", "Rozstęp", "Wariancja",
-                "Odchylenie standardowe", "Współczynnik zmienności", "Współczynnik skośności", "Kurtoza", "Max", "Min");
-
-numerical_statistics <- data.frame("Statystyki" = StatsNames, 
-           "Cena" = stats(database$CenaPLN), 
-           "KM" = stats(database$KM), 
-           "Pojemność" = stats(database$PojemnoscSkokowa), 
-           "Przebieg" = stats(database$CenaPLN),
-           "RokProdukcji"= stats(database$RokProdukcji));
-
-numerical_statistics
-```
-
-
 ## Pole *CenaPLN*
   Kolumna zawiera informacje o cenie po jakie asmochody zostału sprzedane w PLN.
   
-### Dane  
-
-
-
-
-## Cena sprzedaży
 
 ### Dane przed eliminacją danych odstających
 ```{r}
- 
+summarise(database,
+  srednia = mean(CenaPLN),
+  mediana = median(CenaPLN),
+  wariancja = var(CenaPLN),
+  odchylenieStd = sd(CenaPLN),
+  max = max(CenaPLN),
+  min = min(CenaPLN),
+)
 
 ggplot(data=database) + geom_histogram(aes(x=CenaPLN), bins = 50) + ggtitle("Histogram dla cen sprzedaży");
 
@@ -162,15 +125,22 @@ sd_price   = sd(database$CenaPLN);
 lower_bound <- mean_price - 3 * sd_price;
 upper_bound <- mean_price + 3 * sd_price;
 
-cat("Wyznacznowe granice metodą 3 sigma")
-cat("Dolna granica ", lower_bound, ", górna granica ", upper_bound);
+cat("Wyznacznowe granice metodą 3 sigma \n")
+cat("Dolna granica ", lower_bound, ", górna granica ", upper_bound, "\n");
+cat("Dolna granica wykracza poza osiągane wartości kwot sprzedaży (ujemna wartość). \n")
 
 upper_price_example = database[which(database$CenaPLN >= upper_bound),];
 head(upper_price_example[order(upper_price_example$CenaPLN, decreasing = TRUE),])
 
 database = database[database$CenaPLN >= lower_bound & database$CenaPLN <= upper_bound,]
 ```
-Dolna granica wykracza poza osiągane wartości kwot sprzedaży (ujemna wartość).
+
+```{r}
+database %>% group_by(Marka) %>% summarise(liczbaSprzedanych = n(), 
+                                                    sredniaCena = mean(CenaPLN),
+                                                    medianaCena = median(CenaPLN))
+```
+
 ### Dane po eliminacją danych odstających
 ```{r}
 summarise(database,
@@ -194,14 +164,15 @@ ggplot(data=database, aes(sample = CenaPLN)) + stat_qq() + stat_qq_line(colour="
 ```{r}
 fuelType = database %>% group_by(database$RodzajPaliwa) %>% summarise(liczba = n());
 colnames(fuelType) = c("FuelType", "Count");
+fuelType = fuelType[order(fuelType$Count, decreasing = TRUE),]
 fuelType
 
 ggplot(fuelType, aes(x="", y=Count, fill=FuelType)) +
   geom_bar(stat="identity", width=1, color="white") +
   coord_polar("y", start=0) + theme_void();
-  
 ```
 ## Liczba koni mechanicznych samochodu
+
 
 ```{r}
 summarise(database,
@@ -213,5 +184,40 @@ summarise(database,
   min = min(KM),
 )
 
+upper_price_example = database[which(database$CenaPLN >= upper_bound),];
+head(upper_price_example[order(upper_price_example$CenaPLN, decreasing = TRUE),])
+
 ggplot(data=database)+ geom_histogram(aes(x=KM), binwidth = 20) + ggtitle("Histogram dla KM")
+
+
 ```
+
+# VI - Budowa macierzy z bazy danych
+Do zbudowanie macierzy wykorzystano wszystkie dostępne numeryczne dane tj. *CenaPLN*, *KM*, *PrzebiegKm*, *RokProdukcji*, *PojemnoscSkokowa*. 
+Dzięki temu możliwe jest wyznaczenie macierzy korelacji pomiędzy danymi.
+```{r}
+# Select data
+vi_database = select(filter(database, PojazdUszkodzony==FALSE & SkrzyniaBiegowManualna == TRUE), 
+                     c("CenaPLN", "KM", "PrzebiegKm", "RokProdukcji", "PojemnoscSkokowa"))
+
+#Display head
+head(vi_database) 
+
+# Dimension
+vi_dim <- dim(vi_database);
+cat("Rozmiar macierzy:", vi_dim[1], "x", vi_dim[2]);
+
+# Columns mean
+vi_means = round(colMeans(vi_database), 3);
+cat(paste(names(vi_means), vi_means, sep = " : ", collapse = ",\n"))
+
+# Correlation 
+vi_corr_matrix = cor(vi_database);
+print(vi_corr_matrix)
+corrplot(vi_corr_matrix, order = "hclust", 
+         tl.col = "black", tl.srt = 45)
+```
+Jak można zaobserwować:
+- *CenaPLN* skorelowana jest z *RokProdukcji* (silnie), *KM*, *PojemnoscSkokowa* oraz odwrotnie z *PrzebiegKM*,  
+- *PojemnoscSkokowa* jest silnie skorelowana z ilością *KM* (większa pojemność -> więcej KM),
+- *PrzebiegKM* jest odwrotnie skorelowany z *RokProdukcji* (starszy samochód -> większy przebieg).
