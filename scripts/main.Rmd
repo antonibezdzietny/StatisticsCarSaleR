@@ -4,6 +4,8 @@
 #install.packages("tidymodels")
 #install.packages("rpart.plot")
 #install.packages("rgl")
+#install.packages("readxl")
+#install.packages("nortest")
 library(dplyr)
 library(ggplot2)
 library(viridis)
@@ -11,6 +13,8 @@ library(corrplot)
 library(tidymodels)
 library(rpart.plot)
 library(rgl)
+library(readxl)
+library(nortest)
 ```
 
 # Baza danych
@@ -71,6 +75,7 @@ database = database[database$SkrzyniaBiegow != "półautomatyczna/sekwencyjna",]
 database$SkrzyniaBiegow = database$SkrzyniaBiegow == "manualna";
 colnames(database)[14] = "SkrzyniaBiegowManualna";
 ```
+
 ## Pole *PojazdUszkodzony*
   Domyślnym typem danych dla pola *PojazdUszkodzony* jest (char), gdzie zmienna jest typem logicznym.
   W związku z powyższym kolumna *PojazdUszkodzony* została przekształcona to typu *bool*.
@@ -109,12 +114,13 @@ summarise(database,
 ggplot(data=database) + geom_histogram(aes(x=CenaPLN), bins = 50) + ggtitle("Histogram dla cen sprzedaży");
 
 ggplot(data=database) + geom_boxplot(aes(x=CenaPLN)) + ggtitle("Wykres pudełko-wąsy dla cen sprzedaży");
-
-ggplot(data=database, aes(sample = CenaPLN)) + stat_qq() + stat_qq_line(colour="red") + ylab("Kwantyl Teoretyczny") + xlab("Kwantyl Empiryczny") + 
-  ggtitle("Wykres QQ dla cen sprzedaży") + theme(axis.text.x = element_blank(), axis.text.y = element_blank()) ;
 ```
-### Redukcja danych odstających
-Redukcja danych zgodnie z regółą 3 sigma. 
+
+# IV -  Obserwacje odstające
+Obserwacja odstająca, element odstający  – obserwacja relatywnie odległa od pozostałych elementów próby. Innymi słowy, posiadająca nietypową wartość zmiennej niezależnej (objaśniającej) lub nietypowe wartości obydwu zmiennych – zależnej (objaśnianej) i objaśniającej (objaśniających w analizie regresji wielokrotnej). 
+
+## Redukcja danych odstających zgodnie z regułą 3 sigma
+Redukcja danych zgodnie z regułą 3 sigma. 
 
 Identyfikacja danych odstających za pomocą reguły trzech sigm:
 
@@ -157,7 +163,7 @@ IQR = Q3-Q1;
 lower_bound = Q1 - 1.5*IQR #mniejsze niż
 upper_bound = Q3 + 1.5*IQR #większe niż 
 
-cat("Wyznacznowe granice metodą 3 sigma \n")
+cat("Wyznacznowe granice metodą odstępu międzykwartylowego sigma \n")
 cat("Dolna granica ", lower_bound, ", górna granica ", upper_bound, "\n");
 cat("Dolna granica wykracza poza osiągane wartości kwot sprzedaży (ujemna wartość). \n")
 
@@ -220,6 +226,105 @@ ggplot(data=database)+ geom_histogram(aes(x=KM), binwidth = 20) + ggtitle("Histo
 
 
 ```
+
+# V - Wyznaczanie prawdopodobieństw dla zmiennej
+
+## Rozkłady dyskretne
+
+### Dwumianowy
+```{r}
+#Generowanie próbki
+set.seed(42)
+N <- 1000
+n <- 20
+p <- 0.4
+X <- rbinom(N, n, p)
+
+#Prawdopodobieństwa
+pbinom(8, n, p) - pbinom(7, n, p) # P(X=8) p. punktowe
+pbinom(10, n, p) # P(X<=10) p. przedziałowe
+
+#Wykres gęstości
+a <- seq(0, n, by = 1)
+b <- dbinom(a, n, p)
+plot(a,b, type="h")
+
+#Wykres dystrybuanty
+a <- seq(0, n, by = 1)
+b <- pbinom(a, n, p)
+plot(a,b)
+```
+### Rozkład Poissona
+```{r}
+#Generowanie próbki
+N <- 1000
+lambda <- 200
+X <- rpois(N, lambda)
+
+#Prawdopodobieństwa
+ppois(190, lambda) - ppois(189, lambda) # P(X=190)
+ppois(190, lambda) #(P<=190)
+
+#Wykres gęstości
+a <- seq(min(X), max(X), by = 1)
+b <- dpois(a, lambda)
+plot(a,b, type="h")
+
+#Wykres dystrybuanty
+a <- seq(min(X), max(X), by = 1)
+b <- ppois(a, lambda)
+plot(a,b)
+```
+
+## Rozkłady ciągłe 
+
+### Rozkład normalny
+```{r}
+#Generowanie próbki
+N <- 1000
+mu <- 7 # średnia
+sigma <- 10 # odchylenie standardowe
+X <- rnorm(N, mu, sigma)
+
+#Prawdopodobieństwa
+#Prawd. punktowe w rozkładzie ciągłym = 0
+pnorm(10, mu, sigma) # P(X<=10) p. przedziałowe
+
+#Wykres gęstości
+a <- seq(min(X), max(X), by = 0.5)
+b <- dnorm(a, mu, sigma)
+plot(a,b, type="h")
+
+#Wykres dystrybuanty
+a <- seq(min(X), max(X), by = 0.5)
+b <- pnorm(a, mu, sigma)
+plot(a,b)
+```
+
+
+### Rozkład Beta
+```{r}
+#Generowanie próbki
+N <- 1000
+alpha <- 0.5
+beta <- 0.5
+X <- rbeta(N, alpha, beta)
+
+#Prawdopodobieństwa
+#Prawd. punktowe w rozkładzie ciągłym = 0
+pbeta(0.7, alpha, beta) # P(X<=0.7) p. przedziałowe
+
+#Wykres gęstości
+a <- seq(0, 1, by = 0.02)
+b <- dbeta(a, alpha, beta)
+plot(a,b, type="h")
+
+#Wykres dystrybuanty
+a <- seq(0, 1, by = 0.02)
+b <- pbeta(a, alpha, beta)
+plot(a,b)
+```
+
 
 # VI - Budowa macierzy z bazy danych
 Do zbudowanie macierzy wykorzystano wszystkie dostępne numeryczne dane tj. *CenaPLN*, *KM*, *PrzebiegKm*, *RokProdukcji*, *PojemnoscSkokowa*. 
@@ -292,6 +397,7 @@ colnames(mean_confidence_intervals) = c("Dolny przedział", "Górny przedział")
 print("Przedziały ufności średniej dla różnych poziomów ufności:");
 print(mean_confidence_intervals);
 ```
+
 Przedział ufności dla wariancji:
 ```{r}
 # Meta data 
@@ -355,6 +461,53 @@ colnames(confidence_intervals) = c("Dolny przedział", "Górny przedział");
 # Display
 print("Przedziały ufności dla frakcji dla różnych poziomów ufności (Udział pojazdów uszkodzonych):");
 print(confidence_intervals);
+```
+
+# VII - Testowanie hipotez
+
+## Zmienne jakościowe
+
+### Test niezależności 
+Do testu niezależności wykorzystano dane dotyczące kraju pochodzenia oraz marki.
+Celem testu jest podtwierdzenie niezależności wyboru marki względem kraju.
+H0 - zmienne są niezależne,
+H1 - zmienne nie są niezależne.
+```{r}
+print(table(database$KrajPochodzenia, database$Marka));
+vii_test = chisq.test(table(database$Marka, database$SkrzyniaBiegowManualna));
+print(vii_test)
+```
+Test to potwierdza (p-value < 0.05) mamy podstawy do odrzucenia hipotezy zerowej na korzyść hipotezy alternatywnej - 
+istnieje zależność krajem pochodzenia, a marką.
+
+
+### Test proporcji
+Test proprcji w którym wykorzystano liczbę samochodów uszkodzonych oraz kraj pochodzenie.
+H0 - odsetek samochodów uszkodzonych jest niezależny od kraju pochodzenia.
+```{r}
+vii_proporcja = database %>% group_by(database$KrajPochodzenia) %>% summarise(liczba = n());
+vii_proporcja$uszkodzonych = table(database$KrajPochodzenia, database$PojazdUszkodzony)[,2];
+vii_proporcja = vii_proporcja %>% filter(liczba > 500);
+vii_test = prop.test(x = vii_proporcja$uszkodzonych, n = vii_proporcja$liczba);
+print(vii_test);
+```
+### Zmienne ilościowe
+Testowanie normalności względem ceny, test pozwala na potwierdzenie tezy o normalności rozkładu.
+H0 -  doświadczenie ma rozkład normalny.
+```{r}
+vii_test = ad.test(database$CenaPLN);
+print(vii_test);
+ggplot(database, aes(sample = CenaPLN)) +
+  stat_qq() +
+  stat_qq_line();
+```
+Cena nie jest zmienną o rozkładzie normalnym.
+
+### Test Wilcoxona
+Ze względu na to, iż cena nie jest zmienną o rozkładzie normalnym. Wykorzystujemy nieparametryczny test Wilcoxona.
+H0 - średnia jest równa 34656.
+```{r}
+wilcox.test(x = database$CenaPLN, mu = 34656)
 ```
 
 # IX - Regresja liniowa i inne
