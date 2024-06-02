@@ -1,10 +1,16 @@
 ```{r, echo=FALSE, include=FALSE}
 #install.packages("viridis")
 #install.packages("corrplot")
+#install.packages("tidymodels")
+#install.packages("rpart.plot")
+#install.packages("rgl")
 library(dplyr)
 library(ggplot2)
 library(viridis)
 library(corrplot)
+library(tidymodels)
+library(rpart.plot)
+library(rgl)
 ```
 
 # Baza danych
@@ -135,6 +141,29 @@ head(upper_price_example[order(upper_price_example$CenaPLN, decreasing = TRUE),]
 database = database[database$CenaPLN >= lower_bound & database$CenaPLN <= upper_bound,]
 ```
 
+## Redukcja danych odstających regułą odstępu międzykwartylowgo
+Metoda redukcji, polega na wykrywaniu i usuwaniu wartości odstających z zestawu danych. Metoda ta opiera się na kwartylach i rozstępie międzykwartylowym.
+
+1. Wyznaczenie *Q1* (pierwszy kwartyl) oraz *Q3* (trzeci kwartyl)
+
+2. Wyznaczenie odstępu międzykwartylowgo *IQR = Q3 - Q1*
+
+3. Wyznaczenie dolnej *Q1 - 1.5 x IQR* oraz górnej *Q1 + 1.5 x IQR* granicy.
+
+```{r}
+Q1 = quantile(database$PrzebiegKm, 0.25);
+Q3 = quantile(database$PrzebiegKm, 0.75);
+IQR = Q3-Q1;
+lower_bound = Q1 - 1.5*IQR #mniejsze niż
+upper_bound = Q3 + 1.5*IQR #większe niż 
+
+cat("Wyznacznowe granice metodą 3 sigma \n")
+cat("Dolna granica ", lower_bound, ", górna granica ", upper_bound, "\n");
+cat("Dolna granica wykracza poza osiągane wartości kwot sprzedaży (ujemna wartość). \n")
+
+database = database[database$PrzebiegKm >= lower_bound & database$PrzebiegKm <= upper_bound,]
+```
+
 ```{r}
 database %>% group_by(Marka) %>% summarise(liczbaSprzedanych = n(), 
                                                     sredniaCena = mean(CenaPLN),
@@ -223,14 +252,22 @@ Jak można zaobserwować:
 - *PrzebiegKM* jest odwrotnie skorelowany z *RokProdukcji* (starszy samochód -> większy przebieg).
 
 # VII - Przedziały ufności
-```{r}
-# Data
-vii_price = database$CenaPLN;
+W tej sekcji przedstawione zostaną badania określające przedziały ufności z różnym stopniem 'zaufania'.
+Oznacza to, że jeśli grupa badana była zgromadzona w sposób losowy to rzeczywisty parametr
+populacji z z określonym stopniem 'zaufania' znajduje się w tym przedziale.
 
-# Basic statistics
-vii_price_mean = mean(vii_price);
-vii_price_sd = sd(vii_price);
-n = length(vii_price);
+## Zmienna numeryczna
+W celu określnenia przedziałów ufności zmiennej numerycznej wybrano cechę *CenaPLN*.
+Przedział ufności dla średniej:
+```{r}
+# Meta data 
+# Confidence level 0.9, 0.95, 0.99
+confidence_level = c(0.9, 0.95, 0.99);
+
+# Basic data
+vii_price_mean = mean(database$CenaPLN);
+vii_price_sd = sd(database$CenaPLN);
+n = length(database$CenaPLN);
 
 # Mean confidence function
 mean_confidence <- function(mean, sd, n, confidence_level) {
@@ -241,9 +278,7 @@ mean_confidence <- function(mean, sd, n, confidence_level) {
   return(c(lower_bound, upper_bound));
 };
 
-# Confidence level 0.9, 0.95, 0.99
-confidence_level = c(0.9, 0.95, 0.99);
-
+# Calculate confidence
 mean_confidence_intervals = sapply(confidence_level, function(conf_level) {
   mean_confidence(vii_price_mean, vii_price_sd, n, conf_level)
 });
@@ -256,7 +291,12 @@ colnames(mean_confidence_intervals) = c("Dolny przedział", "Górny przedział")
 # Display
 print("Przedziały ufności średniej dla różnych poziomów ufności:");
 print(mean_confidence_intervals);
-
+```
+Przedział ufności dla wariancji:
+```{r}
+# Meta data 
+# Confidence level 0.9, 0.95, 0.99
+confidence_level = c(0.9, 0.95, 0.99);
 
 # SD confidence function
 sd_confidence <- function(mean, n, confidence_level) {
@@ -267,6 +307,7 @@ sd_confidence <- function(mean, n, confidence_level) {
   return(c(lower_bound, upper_bound));
 };
 
+# Calculate confidence
 sd_confidence_intervals = sapply(confidence_level, function(conf_level) {
   sd_confidence(vii_price_mean, n, conf_level);
 });
@@ -281,8 +322,14 @@ print("Przedziały ufności odchylenia standardowego dla różnych poziomów ufn
 print(sd_confidence_intervals);
 ```
 
-## Przedział ufności dla rozkładu Bernoulliego
+## Przedział ufności dla zmiennej jakościowej (frakcyjna)
+Do wyznaczenia przedziału ufności dla zmiennej *PojazdUszkodzony* (rozkład Bernoulliego)
 ```{r}
+# Meta data 
+# Confidence level 0.9, 0.95, 0.99
+confidence_level = c(0.9, 0.95, 0.99);
+
+# Basic data
 vii_positive = sum(database$PojazdUszkodzony == TRUE);
 vii_all      = length(database$PojazdUszkodzony);
 
@@ -295,9 +342,7 @@ mean_bool_confidence <- function(m, n, confidence_level) {
   return(c(lower_bound, upper_bound));
 };
 
-# Confidence level 0.9, 0.95, 0.99
-confidence_level = c(0.9, 0.95, 0.99);
-
+# Calculate confidence
 confidence_intervals = sapply(confidence_level, function(conf_level) {
   mean_bool_confidence(vii_positive, vii_all, conf_level);
 });
@@ -308,6 +353,75 @@ rownames(confidence_intervals) = paste0("Poziom ufności: ", confidence_level);
 colnames(confidence_intervals) = c("Dolny przedział", "Górny przedział");
 
 # Display
-print("Przedziały ufności dla frakcjidla różnych poziomów ufności (Udział pojazdów uszkodzonych):");
+print("Przedziały ufności dla frakcji dla różnych poziomów ufności (Udział pojazdów uszkodzonych):");
 print(confidence_intervals);
 ```
+
+# IX - Regresja liniowa i inne
+
+## Modele dla jednej zmiennej
+```{r}
+ix_database = select(filter(database, PojazdUszkodzony==FALSE & SkrzyniaBiegowManualna == TRUE), 
+                     c("CenaPLN", "PrzebiegKm"))
+model = lm(CenaPLN ~ . , data = ix_database)
+ix_sample = ix_database[sample(nrow(ix_database), size=1000),]
+plot(CenaPLN ~ PrzebiegKm,  data=ix_sample, col = 'darkcyan')
+abline(model, col="red")
+
+summary(model);
+print(model$coefficients);
+```
+```{r}
+ix_database = select(filter(database, PojazdUszkodzony==FALSE & SkrzyniaBiegowManualna == TRUE), 
+                     c("CenaPLN", "PojemnoscSkokowa"))
+model = lm(CenaPLN ~ . , data = ix_database)
+ix_sample = ix_database[sample(nrow(ix_database), size=1000),]
+plot(CenaPLN ~ PojemnoscSkokowa,  data=ix_sample, col = 'darkcyan')
+abline(model, col="red")
+
+summary(model);
+print(model$coefficients);
+```
+
+## Modele dla 2 zmiennych
+```{r}
+ix_database = select(filter(database, PojazdUszkodzony==FALSE & SkrzyniaBiegowManualna == TRUE), 
+                     c("CenaPLN", "PrzebiegKm", "PojemnoscSkokowa"))
+model = lm(CenaPLN ~ . , data = ix_database)
+
+plot3d(model, col='darkcyan', plane.col = 'red')
+rglwidget()
+
+summary(model);
+print(model$coefficients);
+```
+
+## Drzewa decyzyjne
+```{r}
+ix_database = select(filter(database, PojazdUszkodzony==FALSE & SkrzyniaBiegowManualna == TRUE), 
+                     c("CenaPLN", "RokProdukcji", "PojemnoscSkokowa"))
+ix_data_split = initial_split(ix_database, prop = 0.75);
+ix_train_data <- training(ix_data_split);
+ix_test_data <- testing(ix_data_split);
+
+tree_spec <- decision_tree() %>%
+ set_engine("rpart") %>%
+ set_mode("regression")
+
+tree_fit <- tree_spec %>%
+ fit(CenaPLN ~ ., data = ix_train_data)
+
+predictions <- tree_fit %>%
+ predict(ix_test_data) %>%
+ pull(.pred)
+
+metrics <- metric_set(rmse, rsq)
+model_performance <- ix_test_data %>%
+ mutate(predictions = predictions) %>%
+ metrics(truth = CenaPLN, estimate = predictions)
+
+print(model_performance)
+
+rpart.plot(tree_fit$fit, type = 5, extra = 101, under = TRUE, cex = 0.8, box.palette = "auto")
+```
+
