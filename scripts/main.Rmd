@@ -1,4 +1,11 @@
+---
+output:
+  pdf_document: default
+  html_document: default
+---
 ```{r, echo=FALSE, include=FALSE}
+#install.packages("dplyr")
+#install.packages("ggplot2")
 #install.packages("viridis")
 #install.packages("corrplot")
 #install.packages("tidymodels")
@@ -15,6 +22,14 @@ library(rpart.plot)
 library(rgl)
 library(readxl)
 library(nortest)
+```
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+install.packages("revealjs")
+library(tinytex)
+library(revealjs)
 ```
 
 # Baza danych
@@ -101,7 +116,7 @@ tail(database, N);
   
 
 ### Dane przed eliminacją danych odstających
-```{r}
+```{r, message = FALSE}
 summarise(database,
   srednia = mean(CenaPLN),
   mediana = median(CenaPLN),
@@ -124,13 +139,13 @@ Redukcja danych zgodnie z regułą 3 sigma.
 
 Identyfikacja danych odstających za pomocą reguły trzech sigm:
 
-1. Obliczenie średniej (μ): Najpierw oblicza się średnią dla danego zbioru danych.
+1. Obliczenie średniej ($\mu$): Najpierw oblicza się średnią dla danego zbioru danych.
 
-2. Obliczenie odchylenia standardowego (σ): Następnie oblicza się odchylenie standardowe, które mierzy, jak bardzo dane rozpraszają się wokół średniej.
+2. Obliczenie odchylenia standardowego ($\sigma$): Następnie oblicza się odchylenie standardowe, które mierzy, jak bardzo dane rozpraszają się wokół średniej.
 
-3. Ustalenie zakresu trzech sigm: Wartości, które znajdują się poza zakresem trzech sigm (μ ± 3σ), są uznawane za dane odstające.
+3. Ustalenie zakresu trzech sigm: Wartości, które znajdują się poza zakresem trzech sigm ($\mu$ ± 3$\sigma$), są uznawane za dane odstające.
 
-```{r}
+```{r, message = FALSE}
 mean_price = mean(database$CenaPLN);
 sd_price   = sd(database$CenaPLN);
 
@@ -152,11 +167,11 @@ Metoda redukcji, polega na wykrywaniu i usuwaniu wartości odstających z zestaw
 
 1. Wyznaczenie *Q1* (pierwszy kwartyl) oraz *Q3* (trzeci kwartyl)
 
-2. Wyznaczenie odstępu międzykwartylowgo *IQR = Q3 - Q1*
+2. Wyznaczenie odstępu międzykwartylowego *IQR = Q3 - Q1*
 
 3. Wyznaczenie dolnej *Q1 - 1.5 x IQR* oraz górnej *Q1 + 1.5 x IQR* granicy.
 
-```{r}
+```{r, message = FALSE}
 Q1 = quantile(database$PrzebiegKm, 0.25);
 Q3 = quantile(database$PrzebiegKm, 0.75);
 IQR = Q3-Q1;
@@ -170,14 +185,14 @@ cat("Dolna granica wykracza poza osiągane wartości kwot sprzedaży (ujemna war
 database = database[database$PrzebiegKm >= lower_bound & database$PrzebiegKm <= upper_bound,]
 ```
 
-```{r}
+```{r, message = FALSE}
 database %>% group_by(Marka) %>% summarise(liczbaSprzedanych = n(), 
                                                     sredniaCena = mean(CenaPLN),
                                                     medianaCena = median(CenaPLN))
 ```
 
 ### Dane po eliminacją danych odstających
-```{r}
+```{r, message = FALSE}
 summarise(database,
   srednia = mean(CenaPLN),
   mediana = median(CenaPLN),
@@ -196,7 +211,7 @@ ggplot(data=database, aes(sample = CenaPLN)) + stat_qq() + stat_qq_line(colour="
 ```
 
 
-```{r}
+```{r, message = FALSE}
 fuelType = database %>% group_by(database$RodzajPaliwa) %>% summarise(liczba = n());
 colnames(fuelType) = c("FuelType", "Count");
 fuelType = fuelType[order(fuelType$Count, decreasing = TRUE),]
@@ -209,7 +224,7 @@ ggplot(fuelType, aes(x="", y=Count, fill=FuelType)) +
 ## Liczba koni mechanicznych samochodu
 
 
-```{r}
+```{r, message = FALSE}
 summarise(database,
   srednia = mean(KM),
   mediana = median(KM),
@@ -329,7 +344,7 @@ plot(a,b)
 # VI - Budowa macierzy z bazy danych
 Do zbudowanie macierzy wykorzystano wszystkie dostępne numeryczne dane tj. *CenaPLN*, *KM*, *PrzebiegKm*, *RokProdukcji*, *PojemnoscSkokowa*. 
 Dzięki temu możliwe jest wyznaczenie macierzy korelacji pomiędzy danymi.
-```{r}
+```{r, message = FALSE}
 # Select data
 vi_database = select(filter(database, PojazdUszkodzony==FALSE & SkrzyniaBiegowManualna == TRUE), 
                      c("CenaPLN", "KM", "PrzebiegKm", "RokProdukcji", "PojemnoscSkokowa"))
@@ -364,7 +379,7 @@ populacji z z określonym stopniem 'zaufania' znajduje się w tym przedziale.
 ## Zmienna numeryczna
 W celu określnenia przedziałów ufności zmiennej numerycznej wybrano cechę *CenaPLN*.
 Przedział ufności dla średniej:
-```{r}
+```{r, message = FALSE}
 # Meta data 
 # Confidence level 0.9, 0.95, 0.99
 confidence_level = c(0.9, 0.95, 0.99);
@@ -399,7 +414,7 @@ print(mean_confidence_intervals);
 ```
 
 Przedział ufności dla wariancji:
-```{r}
+```{r, message = FALSE}
 # Meta data 
 # Confidence level 0.9, 0.95, 0.99
 confidence_level = c(0.9, 0.95, 0.99);
@@ -430,7 +445,7 @@ print(sd_confidence_intervals);
 
 ## Przedział ufności dla zmiennej jakościowej (frakcyjna)
 Do wyznaczenia przedziału ufności dla zmiennej *PojazdUszkodzony* (rozkład Bernoulliego)
-```{r}
+```{r, message = FALSE}
 # Meta data 
 # Confidence level 0.9, 0.95, 0.99
 confidence_level = c(0.9, 0.95, 0.99);
@@ -513,7 +528,7 @@ wilcox.test(x = database$CenaPLN, mu = 34656)
 # IX - Regresja liniowa i inne
 
 ## Modele dla jednej zmiennej
-```{r}
+```{r, message = FALSE}
 ix_database = select(filter(database, PojazdUszkodzony==FALSE & SkrzyniaBiegowManualna == TRUE), 
                      c("CenaPLN", "PrzebiegKm"))
 model = lm(CenaPLN ~ . , data = ix_database)
@@ -524,7 +539,7 @@ abline(model, col="red")
 summary(model);
 print(model$coefficients);
 ```
-```{r}
+```{r, message = FALSE}
 ix_database = select(filter(database, PojazdUszkodzony==FALSE & SkrzyniaBiegowManualna == TRUE), 
                      c("CenaPLN", "PojemnoscSkokowa"))
 model = lm(CenaPLN ~ . , data = ix_database)
@@ -537,7 +552,7 @@ print(model$coefficients);
 ```
 
 ## Modele dla 2 zmiennych
-```{r}
+```{r, message = FALSE, rgl = TRUE}
 ix_database = select(filter(database, PojazdUszkodzony==FALSE & SkrzyniaBiegowManualna == TRUE), 
                      c("CenaPLN", "PrzebiegKm", "PojemnoscSkokowa"))
 model = lm(CenaPLN ~ . , data = ix_database)
@@ -550,7 +565,7 @@ print(model$coefficients);
 ```
 
 ## Drzewa decyzyjne
-```{r}
+```{r, message = FALSE}
 ix_database = select(filter(database, PojazdUszkodzony==FALSE & SkrzyniaBiegowManualna == TRUE), 
                      c("CenaPLN", "RokProdukcji", "PojemnoscSkokowa"))
 ix_data_split = initial_split(ix_database, prop = 0.75);
@@ -577,4 +592,3 @@ print(model_performance)
 
 rpart.plot(tree_fit$fit, type = 5, extra = 101, under = TRUE, cex = 0.8, box.palette = "auto")
 ```
-
