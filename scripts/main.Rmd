@@ -24,61 +24,86 @@ library(readxl)
 library(nortest)
 ```
 
+\vspace*{1cm}
 
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
-install.packages("revealjs")
-library(tinytex)
-library(revealjs)
-```
+\begin{center}
+  \textbf{Statystyka matematyczna i ekonometria}
 
-# Baza danych
-  Baza danych **AutoSprzedam.dat**. Baza pochodzi z zasobów zgormadzonych na ePortalu.
 
-## Zawartość
-  Baza danych zawiera 41034 rekordów zawierających szczegółowe dane dotyczące sprzedaży samochodów m.in.
+  \vspace{0.5cm}
+
+  Projekt - Auto Sprzedam
+
+            
+  \vspace{2cm}
+
+  \textbf{Autorzy} \\ 
+  Anna Kalitka (255445) \\
+  Antoni Bezdzietny (249327)
+
+  \vfill
+            
+  Projekt zaliczeniowy\\
+  Laboratorium, lato 2023/24
+  
+  \vspace{2cm}
+  
+\end{center}            
+
+
+# I - Opis bazy danych
+  Wybrana została baza danych **AutoSprzedam**. Baza pochodzi z zasobów ePortalu.
+  
+  
+## Zawartość bazy danych
+  Baza danych składa się z 41034 rekordów, zawierających szczegółowe dane dotyczące sprzedaży samochodów m.in.
 
   <p style="text-align:center;">
   | Kolumna            | Typ danych | Opis                                                                                      |
   |--------------------|------------|-------------------------------------------------------------------------------------------|
-  | NrOferty           | int        | Numer oferty sprzedaży samochodu.                                                        |
-  | CenaPLN            | string      | Cena samochodu wyrażona w polskich złotych (PLN).                                         |
+  | NrOferty           | int        | Numer oferty sprzedaży samochodu.                                                         |
+  | CenaPLN            | string     | Cena samochodu wyrażona w polskich złotych (PLN).                                         |
   | KM                 | int        | Liczba koni mechanicznych samochodu.                                                      |
   | Marka              | string     | Marka samochodu.                                                                          |
   | Model              | string     | Model samochodu.                                                                          |
-  | LiczbaDrzwi       | string        | Liczba drzwi w samochodzie.                                                               |
-  | PojemnoscSkokowa  | int      | Pojemność skokowa silnika wyrażona w centymetrach sześciennych (cm³).                      |
+  | LiczbaDrzwi        | string     | Liczba drzwi w samochodzie.                                                               |
+  | PojemnoscSkokowa   | int        | Pojemność skokowa silnika wyrażona w centymetrach sześciennych (cm³).                     |
   | PrzebiegKm         | int        | Przebieg samochodu wyrażony w kilometrach.                                                |
-  | RodzajPaliwa      | string     | Rodzaj paliwa używanego przez samochód (benzyna, diesel, hybryda, elektryczny itp.).      |
+  | RodzajPaliwa       | string     | Rodzaj paliwa używanego przez samochód (benzyna, diesel, hybryda, elektryczny itp.).      |
   | RokProdukcji       | int        | Rok produkcji samochodu.                                                                  |
   | Kolor              | string     | Kolor samochodu.                                                                          |
   | KrajPochodzenia    | string     | Kraj pochodzenia samochodu.                                                               |
-  | PojazdUszkodzony  | string       | Informacja czy pojazd jest uszkodzony (Tak/Nie).                                           |
-  | SkrzyniaBiegow     | string     | Typ skrzyni biegów w samochodzie (manualna, automatyczna).                                  |
+  | PojazdUszkodzony   | string     | Informacja czy pojazd jest uszkodzony (Tak/Nie).                                          |
+  | SkrzyniaBiegow     | string     | Typ skrzyni biegów w samochodzie (manualna, automatyczna).                                |
   </p>
   
-## Podstawowe dana dotyczące bazy danych
-```{r, echo=FALSE, include=TRUE}
-database = read.csv("../database/AutoSprzedam.dat", sep = "\t", dec = ',');
-N = 5;
-cat("Liczba rekordów:", nrow(database), ", liczba kolumn:", ncol(database), "\n\n")
 
+## Prezentacja bazy danych
+```{r}
+# Wczytanie bazy danych
+database = read.csv("../database/AutoSprzedam.dat", sep = "\t", dec = ',');
+
+cat("Liczba rekordów:", nrow(database), ", liczba kolumn:", ncol(database), "\n")
+
+N = 5;
 cat("-", "Przykład ", N, "pierwszych rekordów.\n")
-head(database, N);
+head(database, N)
+
 cat("- ", "Przykład ", N, "ostatnich rekordów.\n")
-tail(database, N);
+tail(database, N)
 ```
 
-# Przygotowanie bazy danych
-  Przed przejściem do dalszej pracy z bazą danych konieczne jest jej przygotowanie.
+## Przygotowanie bazy danych
+  Przed przejściem do dalszej pracy z bazą danych postanowiono wprowadzenie zmian w jej strukturze, 
+  których celem jest uproszczenie przyszłych prac z danymi.
 
-## Pole - *SkrzyniaBiegow*
+### Pole - *SkrzyniaBiegow*
   W bazie występują 3 rodzaje typów skrzyni biegów: *półautomatyczna/sekwencyjna*, *manualna* oraz *automatyczna*.
   Udział typu *półautomatyczna/sekwencyjna* w całej bazie wynosi 1,5%.
   
   W związku z niewielkim udziałem ze skrzynią *półautomatyczna/sekwencyjna*, typ ten został usunięty z bazy. 
   Dzięki czemu możliwe jest przekształcenie kolumny *SkrzyniaBiegow* (char), na *SkrzyniaBiegowManualna* (bool).
-```{r, echo=FALSE, include=TRUE}
+```{r}
 gear_box_summary = database %>% group_by(database$SkrzyniaBiegow) %>% summarise(liczba = n());
 gear_box_summary
 cat("Udział pojazdów ze skrzynią biegów typu 'półautomatyczna/sekwencyjna'", sum(gear_box_summary[3,2])/sum(gear_box_summary[,2])*100, "%.");
@@ -91,21 +116,21 @@ database$SkrzyniaBiegow = database$SkrzyniaBiegow == "manualna";
 colnames(database)[14] = "SkrzyniaBiegowManualna";
 ```
 
-## Pole *PojazdUszkodzony*
-  Domyślnym typem danych dla pola *PojazdUszkodzony* jest (char), gdzie zmienna jest typem logicznym.
+### Pole *PojazdUszkodzony*
+  Domyślnym typem danych dla pola *PojazdUszkodzony* jest (char). Zmienna jest typem logicznym (TAK/NIE). 
   W związku z powyższym kolumna *PojazdUszkodzony* została przekształcona to typu *bool*.
-```{r, echo=FALSE, include=TRUE}
+```{r}
 database$PojazdUszkodzony = database$PojazdUszkodzony == "Tak"
 ```
 
-## Baza danych po wprowadzonych modyfikacjach
-```{r, echo=FALSE, include=TRUE}
-cat("Baza danych po wprowadzonych modyfikacjach");
-cat("Liczba rekordów:", nrow(database), ", liczba kolumn:", ncol(database), "\n\n");
-cat("-", "Przykład ", N, "pierwszych rekordów.\n");
-head(database, N);
-cat("-", "Przykład ", N, "ostatnich rekordów.\n");
-tail(database, N);
+## Prezentacja bazy danych - po wprowadzonych zmianach
+```{r}
+N = 5;
+cat("-", "Przykład ", N, "pierwszych rekordów.\n")
+head(database, N)
+
+cat("- ", "Przykład ", N, "ostatnich rekordów.\n")
+tail(database, N)
 ```
 
 
