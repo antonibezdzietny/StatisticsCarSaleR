@@ -7,21 +7,27 @@ output:
 #install.packages("dplyr")
 #install.packages("ggplot2")
 #install.packages("viridis")
+#install.packages("tidyverse")
+#install.packages("hrbrthemes")
 #install.packages("corrplot")
 #install.packages("tidymodels")
 #install.packages("rpart.plot")
 #install.packages("rgl")
 #install.packages("readxl")
 #install.packages("nortest")
+
 library(dplyr)
 library(ggplot2)
 library(viridis)
+#library(tidyverse)
+#library(hrbrthemes)
 library(corrplot)
 library(tidymodels)
 library(rpart.plot)
 library(rgl)
 library(readxl)
 library(nortest)
+library(patchwork)
 ```
 
 \vspace*{1cm}
@@ -105,8 +111,10 @@ tail(database, N)
   Dzięki czemu możliwe jest przekształcenie kolumny *SkrzyniaBiegow* (char), na *SkrzyniaBiegowManualna* (bool).
 ```{r}
 gear_box_summary = database %>% group_by(database$SkrzyniaBiegow) %>% summarise(liczba = n());
+
 gear_box_summary
-cat("Udział pojazdów ze skrzynią biegów typu 'półautomatyczna/sekwencyjna'", sum(gear_box_summary[3,2])/sum(gear_box_summary[,2])*100, "%.");
+cat("Udział pojazdów ze skrzynią biegów typu 'półautomatyczna/sekwencyjna'", 
+    sum(gear_box_summary[3,2])/sum(gear_box_summary[,2])*100, "%.");
 
 # Remove cars with database$SkrzyniaBiegow == 'półautomatyczna/sekwencyjna'
 database = database[database$SkrzyniaBiegow != "półautomatyczna/sekwencyjna",];
@@ -120,7 +128,15 @@ colnames(database)[14] = "SkrzyniaBiegowManualna";
   Domyślnym typem danych dla pola *PojazdUszkodzony* jest (char). Zmienna jest typem logicznym (TAK/NIE). 
   W związku z powyższym kolumna *PojazdUszkodzony* została przekształcona to typu *bool*.
 ```{r}
-database$PojazdUszkodzony = database$PojazdUszkodzony == "Tak"
+database$PojazdUszkodzony = database$PojazdUszkodzony == "Tak";
+```
+
+### Pole *Liczba drzwi*
+W bazie występują pojazdy tylko i wyłącznie z dwoma liczbami drzwi *2/3* oraz *4/5*.
+W związku z powyższym można analogicznie przekształcić typ danych na typ *bool*.
+```{r}
+database$LiczbaDrzwi = database$LiczbaDrzwi == "4/5";
+colnames(database)[6] = "LiczbaDrzwi4/5"
 ```
 
 ## Prezentacja bazy danych - po wprowadzonych zmianach
@@ -134,81 +150,130 @@ tail(database, N)
 ```
 
 
-# Wyznaczenie podstawowych statystyk
+# II - Wyznaczenie podstawowych statystyk
+W tej sekcji przedstawione zostaną podstawowe statystyki dla wybranych zmiennych.
 
-## Pole *CenaPLN*
-  Kolumna zawiera informacje o cenie po jakie asmochody zostału sprzedane w PLN.
+## Statystyki dla zmiennych nuemrycznych
+```{r}
+numerical_database = data.frame(database$CenaPLN, 
+                                database$KM, 
+                                database$PojemnoscSkokowa, 
+                                database$PrzebiegKm, 
+                                database$RokProdukcji);
+numerical_statistics = data.frame(do.call(cbind, lapply(numerical_database, summary)));
+numerical_statistics[nrow(numerical_statistics)+1,] = sapply(numerical_database, var);
+numerical_statistics[nrow(numerical_statistics)+1,] = sapply(numerical_database, sd);
+row.names(numerical_statistics)[7:8] <- c("Var","Sd");
+numerical_statistics
+```
+## Statystyki dla zmiennych dwumianowych
+```{r}
+logical_database = data.frame(database$`LiczbaDrzwi4/5`, 
+                              database$PojazdUszkodzony, 
+                              database$SkrzyniaBiegowManualna);
+
+logical_statistics = data.frame(do.call(cbind, lapply(logical_database, summary)))[2:3,];
+logical_statistics
+```
+
+
+## Statystyki dla pozostałych zmiennych (jakościowych)
+```{r}
+quality_database = data.frame(database$Marka, 
+                              database$RodzajPaliwa, 
+                              database$Kolor, 
+                              database$KrajPochodzenia);
+
+sapply(quality_database, function (x){
+  round(sort(table(x), decreasing = TRUE) / nrow(quality_database) , 3)})
+```
+
+
+
+
+# III - Graficzna prezentacja danych
+```{r, include=FALSE}
+# Functions used for display
+
+# Remove outlier sample
+interquartile_range = function(x, iqr_factor = 1.5){
+  Q1 = quantile(x, 0.25);
+  Q3 = quantile(x, 0.75);
+  IQR = Q3-Q1;
+  lower_bound = Q1 - iqr_factor*IQR;
+  upper_bound = Q3 + iqr_factor*IQR; 
+  return(x[which(x >= lower_bound & x <=upper_bound)]);
+}
+
+# Draw histogram
+draw_histogram = function(x){
+  h1 = ggplot() + 
+    geom_histogram(aes(x=x, y = after_stat(density)), 
+                 colour = 'red3', fill = 'red2', bins = 50) +
+    geom_density(aes(x=x), lwd = 1, colour = 4,
+               fill = 4, alpha = 0.25) + labs(x = "Wartość", y = "Gęstość") +
+    ggtitle("Histogram oraz gęstość wszystkie dane");
+
+  h2 = ggplot() + 
+    geom_histogram(aes(x=interquartile_range(x), y = after_stat(density)), 
+                 colour = 'red3', fill = 'red2', bins = 50) +
+    geom_density(aes(x=interquartile_range(x)), lwd = 1, colour = 4,
+               fill = 4, alpha = 0.25) + labs(x = "Wartość", y = "Gęstość") +
+    ggtitle("Histogram oraz gęstość odrzucone skrajne");
   
+  return(h1/h2)
+}
 
-### Dane przed eliminacją danych odstających
-```{r, message = FALSE}
-summarise(database,
-  srednia = mean(CenaPLN),
-  mediana = median(CenaPLN),
-  wariancja = var(CenaPLN),
-  odchylenieStd = sd(CenaPLN),
-  max = max(CenaPLN),
-  min = min(CenaPLN),
-)
+# Draw boxplot
+draw_boxplot = function(x, y_lab = "Wartość"){
+  h3 = ggplot() + geom_boxplot(aes(y=database$CenaPLN), colour = "black") +
+    scale_fill_viridis(discrete = TRUE, alpha=0.6) +
+    labs(y = y_lab) + ggtitle("Pudełko-wąsy wszystkie dane")
 
-ggplot(data=database) + geom_histogram(aes(x=CenaPLN), bins = 50) + ggtitle("Histogram dla cen sprzedaży");
+  h4 = ggplot() + geom_boxplot(aes(y=interquartile_range(database$CenaPLN)), colour = "black") +
+    scale_fill_viridis(discrete = TRUE, alpha=0.6) + 
+    labs(y = y_lab) + ggtitle("Pudełko-wąsy odrzucone skrajne")
+  
+  return(h3/h4)
+}
 
-ggplot(data=database) + geom_boxplot(aes(x=CenaPLN)) + ggtitle("Wykres pudełko-wąsy dla cen sprzedaży");
+draw_numerical = function(x, y_lab="Wartość"){
+  print(names(x));
+  draw_histogram(x) |
+  draw_boxplot(x, y_lab) + plot_layout(ncol = 2);
+}
+
 ```
 
-# IV -  Obserwacje odstające
-Obserwacja odstająca, element odstający  – obserwacja relatywnie odległa od pozostałych elementów próby. Innymi słowy, posiadająca nietypową wartość zmiennej niezależnej (objaśniającej) lub nietypowe wartości obydwu zmiennych – zależnej (objaśnianej) i objaśniającej (objaśniających w analizie regresji wielokrotnej). 
-
-## Redukcja danych odstających zgodnie z regułą 3 sigma
-Redukcja danych zgodnie z regułą 3 sigma. 
-
-Identyfikacja danych odstających za pomocą reguły trzech sigm:
-
-1. Obliczenie średniej ($\mu$): Najpierw oblicza się średnią dla danego zbioru danych.
-
-2. Obliczenie odchylenia standardowego ($\sigma$): Następnie oblicza się odchylenie standardowe, które mierzy, jak bardzo dane rozpraszają się wokół średniej.
-
-3. Ustalenie zakresu trzech sigm: Wartości, które znajdują się poza zakresem trzech sigm ($\mu$ ± 3$\sigma$), są uznawane za dane odstające.
-
-```{r, message = FALSE}
-mean_price = mean(database$CenaPLN);
-sd_price   = sd(database$CenaPLN);
-
-lower_bound <- mean_price - 3 * sd_price;
-upper_bound <- mean_price + 3 * sd_price;
-
-cat("Wyznacznowe granice metodą 3 sigma \n")
-cat("Dolna granica ", lower_bound, ", górna granica ", upper_bound, "\n");
-cat("Dolna granica wykracza poza osiągane wartości kwot sprzedaży (ujemna wartość). \n")
-
-upper_price_example = database[which(database$CenaPLN >= upper_bound),];
-head(upper_price_example[order(upper_price_example$CenaPLN, decreasing = TRUE),])
-
-database = database[database$CenaPLN >= lower_bound & database$CenaPLN <= upper_bound,]
+## Wykresy dla zmiennych nuemrycznych
+```{r}
+sapply(numerical_database, draw_numerical)
 ```
 
-## Redukcja danych odstających regułą odstępu międzykwartylowgo
-Metoda redukcji, polega na wykrywaniu i usuwaniu wartości odstających z zestawu danych. Metoda ta opiera się na kwartylach i rozstępie międzykwartylowym.
 
-1. Wyznaczenie *Q1* (pierwszy kwartyl) oraz *Q3* (trzeci kwartyl)
+## Statystyki dla zmiennych dwumianowych
+```{r}
+logical_statistics
 
-2. Wyznaczenie odstępu międzykwartylowego *IQR = Q3 - Q1*
 
-3. Wyznaczenie dolnej *Q1 - 1.5 x IQR* oraz górnej *Q1 + 1.5 x IQR* granicy.
+ggplot(logical_statistics) + geom_bar(aes(y=database.PojazdUszkodzony))
 
-```{r, message = FALSE}
-Q1 = quantile(database$PrzebiegKm, 0.25);
-Q3 = quantile(database$PrzebiegKm, 0.75);
-IQR = Q3-Q1;
-lower_bound = Q1 - 1.5*IQR #mniejsze niż
-upper_bound = Q3 + 1.5*IQR #większe niż 
+ggplot(logical_statistics, aes(x="", y=logical_statistics$database.PojazdUszkodzony, fill=c('True', 'F'))) +
+  geom_bar(stat="identity", width=1, color="white") +
+  coord_polar("y", start=0)
 
-cat("Wyznacznowe granice metodą odstępu międzykwartylowego sigma \n")
-cat("Dolna granica ", lower_bound, ", górna granica ", upper_bound, "\n");
-cat("Dolna granica wykracza poza osiągane wartości kwot sprzedaży (ujemna wartość). \n")
+names(logical_statistics)
+rownames(logical_statistics)
 
-database = database[database$PrzebiegKm >= lower_bound & database$PrzebiegKm <= upper_bound,]
+ggplot(logical_statistics, aes(x="", y=database.PojazdUszkodzony, fill=rownames(logical_statistics))) +
+  geom_bar(stat="identity", width=1, color="white") +
+  coord_polar("y", start=0)
+
+ggplot(logical_statistics, aes(x="", y="database.SkrzyniaBiegowManualna", fill=rownames(logical_statistics))) +
+  geom_bar(stat="identity", width=1, color="white") +
+  coord_polar("y", start=0) + theme_void();
 ```
+
 
 ```{r, message = FALSE}
 database %>% group_by(Marka) %>% summarise(liczbaSprzedanych = n(), 
@@ -259,12 +324,69 @@ summarise(database,
   min = min(KM),
 )
 
-upper_price_example = database[which(database$CenaPLN >= upper_bound),];
-head(upper_price_example[order(upper_price_example$CenaPLN, decreasing = TRUE),])
+#upper_price_example = database[which(database$CenaPLN >= upper_bound),];
+#head(upper_price_example[order(upper_price_example$CenaPLN, decreasing = TRUE),])
 
 ggplot(data=database)+ geom_histogram(aes(x=KM), binwidth = 20) + ggtitle("Histogram dla KM")
 
 
+```
+
+# IV - Obserwacje odstające
+Obserwacja odstająca, element odstający – obserwacja relatywnie odległa od pozostałych elementów próby. 
+Innymi słowy, posiadająca nietypową wartość zmiennej niezależnej (objaśniającej) lub nietypowe wartości obydwu zmiennych – 
+zależnej (objaśnianej) i objaśniającej (objaśniających w analizie regresji wielokrotnej). 
+
+## Redukcja danych odstających zgodnie z regułą 3 sigma (*CenaPLN*)
+Redukcja danych zgodnie z regułą 3 sigma. 
+
+Identyfikacja danych odstających za pomocą reguły trzech sigm:
+
+1. Obliczenie średniej ($\mu$): Najpierw oblicza się średnią dla danego zbioru danych.
+
+2. Obliczenie odchylenia standardowego ($\sigma$): Następnie oblicza się odchylenie standardowe, które mierzy, jak bardzo dane rozpraszają się wokół średniej.
+
+3. Ustalenie zakresu trzech sigm: Wartości, które znajdują się poza zakresem trzech sigm ($\mu$ ± 3$\sigma$), są uznawane za dane odstające.
+
+```{r}
+iv_sigma_mean_price = mean(database$CenaPLN);
+iv_sigma_sd_price   = sd(database$CenaPLN);
+
+iv_sigma_lower_bound <- iv_sigma_mean_price - 3 * iv_sigma_sd_price;
+iv_sigma_upper_bound <- iv_sigma_mean_price + 3 * iv_sigma_sd_price;
+
+cat("Wyznacznowe granice metodą 3 sigma: \n")
+cat("Dolna granica ", iv_sigma_lower_bound, ", górna granica ", iv_sigma_upper_bound, "\n");
+
+iv_n_sigma_outlier = sum(database$CenaPLN >= iv_sigma_upper_bound |
+                         database$CenaPLN <= iv_sigma_lower_bound)
+
+cat("Ilość elementów odstających zgodnie z regułą 3 sigma dla CenaPLN n =", iv_n_sigma_outlier, "\n");
+```
+
+## Redukcja danych odstających regułą odstępu międzykwartylowgo (*PrzebiegKM*)
+Metoda redukcji, polega na wykrywaniu i usuwaniu wartości odstających z zestawu danych. Metoda ta opiera się na kwartylach i rozstępie międzykwartylowym.
+
+1. Wyznaczenie *Q1* (pierwszy kwartyl) oraz *Q3* (trzeci kwartyl)
+
+2. Wyznaczenie odstępu międzykwartylowego *IQR = Q3 - Q1*
+
+3. Wyznaczenie dolnej *Q1 - 1.5 x IQR* oraz górnej *Q1 + 1.5 x IQR* granicy.
+
+```{r}
+iv_Q1 = quantile(database$PrzebiegKm, 0.25);
+iv_Q3 = quantile(database$PrzebiegKm, 0.75);
+iv_IQR = iv_Q3-iv_Q1;
+iv_lower_bound = iv_Q1 - 1.5*iv_IQR #mniejsze niż
+iv_upper_bound = iv_Q3 + 1.5*iv_IQR #większe niż 
+
+cat("Wyznacznowe granice metodą odstępu międzykwartylowgo  \n")
+cat("Dolna granica ", iv_lower_bound, ", górna granica ", iv_upper_bound, "\n");
+
+iv_n_outlier = sum(database$PrzebiegKm >= iv_upper_bound |
+                   database$PrzebiegKm <= iv_lower_bound)
+
+cat("Ilość elementów odstających zgodnie z regułą odstępu międzykwartylowego PrzebiegKm n =", iv_n_outlier, "\n");
 ```
 
 # V - Wyznaczanie prawdopodobieństw dla zmiennej
