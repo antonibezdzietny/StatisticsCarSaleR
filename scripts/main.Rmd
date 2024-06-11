@@ -510,7 +510,7 @@ cat("Rozmiar macierzy:", vi_dim[1], "x", vi_dim[2]);
 vi_means = round(colMeans(vi_database), 3);
 cat(paste(names(vi_means), vi_means, sep = " : ", collapse = ",\n"))
 
-# Correlation 
+# Correlation  
 vi_corr_matrix = cor(vi_database);
 print(vi_corr_matrix)
 corrplot(vi_corr_matrix, order = "hclust", 
@@ -528,7 +528,22 @@ populacji z z określonym stopniem 'zaufania' znajduje się w tym przedziale.
 
 ## Zmienna numeryczna
 W celu określnenia przedziałów ufności zmiennej numerycznej wybrano cechę *CenaPLN*.
-Przedział ufności dla średniej:
+
+### Przedział ufności dla średniej:
+
+Ze względu na dużą liczebność próby $n>30$, przedział ufności dla średniej zgodnie z wzorem:
+
+$P\biggl( \overline{X} - u_{1- \frac{\alpha}{2}} \frac{s}{\sqrt{n}} , \overline{X} + u_{1-\frac{\alpha}{2}} \frac{s}{\sqrt{n}} \biggr)=1-\alpha$
+
+gdzie: 
+
+- $\overline{X}$ - średnia,
+
+- $n$ - to liczebność próby losowej, 
+
+- $s$ - to odchylenie standardowe z próby,
+
+- $u_{\alpha}$ - to wartość kwantyla $1-\frac{\alpha}{2}$ rozkładu normalnego standaryzowanego dla poziomu istotności $\alpha$ . 
 ```{r, message = FALSE}
 # Meta data 
 # Confidence level 0.9, 0.95, 0.99
@@ -561,26 +576,46 @@ colnames(mean_confidence_intervals) = c("Dolny przedział", "Górny przedział")
 # Display
 print("Przedziały ufności średniej dla różnych poziomów ufności:");
 print(mean_confidence_intervals);
+print(paste("Wartość średnia z próby:", round(vii_price_mean,2)));
 ```
 
-Przedział ufności dla wariancji:
+### Przedział ufności dla odchylenia standardowego:
+
+Ze względu na dużą liczebność próby $n>30$, przedział ufności dla odchylenia standardowego zgodnie z wzorem: 
+
+$P\biggl(\frac{S}{1+\frac{u_{\alpha}}{\sqrt{2n}}}<\sigma<\frac{S}{1-\frac{u_{\alpha}}{\sqrt{2n}}}\biggr)=1-\alpha$
+
+gdzie: 
+
+- $n$ - to liczebność próby losowej, 
+
+- $S$ - to odchylenie standardowe z próby,
+
+- $u_{\alpha}$ - to wartość kwantyla $1-\frac{\alpha}{2}$ rozkładu normalnego standaryzowanego dla poziomu istotności $\alpha$ . 
+
 ```{r, message = FALSE}
 # Meta data 
 # Confidence level 0.9, 0.95, 0.99
 confidence_level = c(0.9, 0.95, 0.99);
 
+# Basic data
+vii_price_mean = mean(database$CenaPLN);
+vii_price_sd = sd(database$CenaPLN);
+n = length(database$CenaPLN);
+
 # SD confidence function
-sd_confidence <- function(mean, n, confidence_level) {
+sd_confidence <- function(sd, n, confidence_level) {
   alpha = 1 - confidence_level;
-  offset = qnorm(1 - alpha / 2) / sqrt(2*n);
-  lower_bound = mean / (1 + offset);
-  upper_bound = mean / (1 - offset);
+  ua = qnorm(1 - alpha / 2);
+  offset = ua  / sqrt(2*n);
+  lower_bound = sd / (1 + offset);
+  upper_bound = sd / (1 - offset);
   return(c(lower_bound, upper_bound));
 };
 
 # Calculate confidence
 sd_confidence_intervals = sapply(confidence_level, function(conf_level) {
-  sd_confidence(vii_price_mean, n, conf_level);
+  sd_confidence(vii_price_sd, n, conf_level);
 });
 
 # Create matrix
@@ -591,10 +626,22 @@ colnames(sd_confidence_intervals) = c("Dolny przedział", "Górny przedział");
 # Display
 print("Przedziały ufności odchylenia standardowego dla różnych poziomów ufności:");
 print(sd_confidence_intervals);
+print(paste("Wartość odchylenia standardowego z próby:", round(vii_price_sd,2)));
 ```
 
 ## Przedział ufności dla zmiennej jakościowej (frakcyjna)
-Do wyznaczenia przedziału ufności dla zmiennej *PojazdUszkodzony* (rozkład Bernoulliego)
+Do wyznaczenia przedziału ufności dla zmiennej *PojazdUszkodzony*.
+
+$p \in (\frac{m}{n} – u_{1-\frac{\alpha}{2}} \frac{\sqrt{\frac{m}{n}\cdot(1-\frac{m}{n})}}{\sqrt{n}},\frac{m}{n} + u_{1-\frac{\alpha}{2}} \frac{\sqrt{\frac{m}{n}\cdot(1-\frac{m}{n})}}{\sqrt{n}} )$
+
+gdzie:
+
+$m$ - ilość zdarzeń sprzyjających,
+
+$n$ - ilość wszystkich zdarzeń,
+
+- $u_{\alpha}$ - to wartość kwantyla $1-\frac{\alpha}{2}$ rozkładu normalnego standaryzowanego dla poziomu istotności $\alpha$ .
+
 ```{r, message = FALSE}
 # Meta data 
 # Confidence level 0.9, 0.95, 0.99
@@ -626,8 +673,112 @@ colnames(confidence_intervals) = c("Dolny przedział", "Górny przedział");
 # Display
 print("Przedziały ufności dla frakcji dla różnych poziomów ufności (Udział pojazdów uszkodzonych):");
 print(confidence_intervals);
+print(paste("Udział pojazdów uszkodzonych w zbiorze ", round(vii_positive/length(database$PojazdUszkodzony),2)))
 ```
 
+## Przedział ufności dla zmiennej jakościowej
+Do analizy wybrano pole *Marka*.
+
+```{r}
+vii_marka = database %>% group_by(database$Marka) %>% summarise(percent = n()/length(database$Marka));
+```
+
+### Przedział ufności dla średniaj z udziału *Marki* w zbiorze
+
+Ze względu na mała liczebność próby $n<30$, przedział ufności dla odchylenia standardowego zgodnie z wzorem: 
+
+$P( \overline{X} - t_{\alpha,n-1} \frac{s}{\sqrt{n}} , \overline{X} + t_{\alpha,n-1} \frac{s}{\sqrt{n}} ) = 1 - \alpha$
+
+gdzie: 
+
+- $\overline{X}$ - średnia,
+
+- $n$ - to liczebność próby losowej, 
+
+- $s$ - to odchylenie standardowe z próby,
+
+- $t_{\alpha,n-1}$ -  dystrybuanta rozkładu t-studenta dla 1-a i n-1 stopni swobody. 
+```{r}
+# Meta data 
+# Confidence level 0.9, 0.95, 0.99
+confidence_level = c(0.9, 0.95, 0.99);
+
+# Basic data
+vii_marka_mean = mean(vii_marka$percent);
+vii_marka_sd = sd(vii_marka$percent);
+n = length(vii_marka$percent);
+
+# Mean confidence function
+mean_confidence <- function(mean, sd, n, confidence_level) {
+  alpha = 1 - confidence_level;
+  offset = pt(alpha, n-1) * sd / sqrt(n);
+  lower_bound = mean - offset;
+  upper_bound = mean + offset;
+  return(c(lower_bound, upper_bound));
+};
+
+# Calculate confidence
+mean_confidence_intervals = sapply(confidence_level, function(conf_level) {
+  mean_confidence(vii_marka_mean, vii_marka_sd, n, conf_level)
+});
+
+# Create matrix
+mean_confidence_intervals = t(mean_confidence_intervals);
+rownames(mean_confidence_intervals) = paste0("Poziom ufności: ", confidence_level);
+colnames(mean_confidence_intervals) = c("Dolny przedział", "Górny przedział");
+
+# Display
+print("Przedziały ufności średniej z danych jakościowych dla różnych poziomów ufności:");
+print(mean_confidence_intervals);
+print(paste("Wartość średnia z próby:", round(vii_marka_mean, 3)));
+```
+
+### Przedział ufności dla średniaj z udziału *Marki* w zbiorze
+
+Ze względu na mała liczebność próby $n<30$, przedział ufności dla odchylenia standardowego zgodnie z wzorem: 
+
+$P\biggl(\frac{n\cdot S^{2}}{\chi_{1-\frac{\alpha}{2},n-1}^{2}}<\sigma^{2}<\frac{n\cdot S^{2}}{\chi_{\frac{\alpha}{2},n-1}^{2}}\biggr)=1-\alpha$
+
+gdzie: 
+
+- $n$ - to liczebność próby losowej, 
+
+- $S$ - to odchylenie standardowe z próby,
+
+- $\chi_{1-\frac{\alpha}{2}, n-1}$ -  kwantyle rozkładu Chi-kwadrat 1-a i n-1 stopni swobody. 
+```{r}
+# Meta data 
+# Confidence level 0.9, 0.95, 0.99
+confidence_level = c(0.9, 0.95, 0.99);
+
+# Basic data
+vii_marka_mean = mean(vii_marka$percent);
+vii_marka_sd = sd(vii_marka$percent);
+n = length(vii_marka$percent);
+
+# Mean confidence function
+sd_confidence <- function(sd, n, confidence_level) {
+  alpha = 1 - confidence_level;
+  lower_bound = sqrt((n * sd * sd) / (qchisq(1-alpha/2, n-1)));
+  upper_bound = sqrt((n * sd * sd) / (qchisq(alpha/2, n-1)));
+  return(c(lower_bound, upper_bound));
+};
+
+# Calculate confidence
+sd_confidence_intervals = sapply(confidence_level, function(conf_level) {
+  sd_confidence(vii_marka_sd, n, conf_level);
+});
+
+# Create matrix
+sd_confidence_intervals = t(sd_confidence_intervals);
+rownames(sd_confidence_intervals) = paste0("Poziom ufności: ", confidence_level);
+colnames(sd_confidence_intervals) = c("Dolny przedział", "Górny przedział");
+
+# Display
+print("Przedziały ufności odchylenia standardowego dla różnych poziomów ufności:");
+print(sd_confidence_intervals);
+print(paste("Wartość odchylenia standardowego z próby:", round(vii_marka_sd,2)));
+```
 # VII - Testowanie hipotez
 
 ## Zmienne jakościowe
