@@ -493,8 +493,11 @@ Do zbudowanie macierzy wykorzystano wszystkie dostępne numeryczne dane tj. *Cen
 Dzięki temu możliwe jest wyznaczenie macierzy korelacji pomiędzy danymi.
 ```{r, message = FALSE}
 # Select data
-vi_database = select(filter(database, PojazdUszkodzony==FALSE & SkrzyniaBiegowManualna == TRUE), 
-                     c("CenaPLN", "KM", "PrzebiegKm", "RokProdukcji", "PojemnoscSkokowa"))
+vi_database = data.matrix(select(filter(database, PojazdUszkodzony==FALSE & SkrzyniaBiegowManualna == TRUE), 
+                     c("CenaPLN", "KM", "PrzebiegKm", "RokProdukcji", "PojemnoscSkokowa")))
+
+#Is matrix
+is.matrix(vi_database)
 
 #Display head
 head(vi_database) 
