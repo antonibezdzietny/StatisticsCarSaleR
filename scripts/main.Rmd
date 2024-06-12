@@ -779,52 +779,102 @@ print("Przedziały ufności odchylenia standardowego dla różnych poziomów ufn
 print(sd_confidence_intervals);
 print(paste("Wartość odchylenia standardowego z próby:", round(vii_marka_sd,2)));
 ```
-# VII - Testowanie hipotez
+
+
+# VIII - Testowanie hipotez
 
 ## Zmienne jakościowe
 
-### Test niezależności 
-Do testu niezależności wykorzystano dane dotyczące kraju pochodzenia oraz marki.
-Celem testu jest podtwierdzenie niezależności wyboru marki względem kraju.
-H0 - zmienne są niezależne,
-H1 - zmienne nie są niezależne.
-```{r}
-print(table(database$KrajPochodzenia, database$Marka));
-vii_test = chisq.test(table(database$Marka, database$SkrzyniaBiegowManualna));
-print(vii_test)
-```
-Test to potwierdza (p-value < 0.05) mamy podstawy do odrzucenia hipotezy zerowej na korzyść hipotezy alternatywnej - 
-istnieje zależność krajem pochodzenia, a marką.
+### Test niezależności
+Za pomocą testu niezależności $\chi^2$ sprawdzona zostanie niezależność pomiędzy 
+Marką a udziałem w nich samochodów ze skrzynią mechaniczną.
 
+Hipoteza:
+
+$H_0$ - udział skrznyni mechanicznej jest niezależny od marki,
+
+$H_1$ - udział skrznyni mechanicznej jest zależny od marki,
+
+Poziom istotności $\alpha = 0.05$.
+
+```{r}
+vii_cross = table(database$Marka, database$SkrzyniaBiegowManualna)
+vii_table = data.frame(Marka=rownames(vii_cross), UdzialSkrzyniManualnej = (vii_cross[,2]/(vii_cross[,1]+vii_cross[,2]))*100)
+
+ggplot(vii_table, aes(y=Marka, x=UdzialSkrzyniManualnej)) + 
+    geom_bar(position="dodge", stat="identity", fill="orange")+
+    ggtitle("Udział samochodów z skrzynią manualną")
+
+chisq.test(vii_cross)
+```
+Zgodnie z wynikiem testu mamy podstawy do odrzucenia hipotezy zerowej na korzyść 
+hipotezy alternatywnej - udział skrznyni mechanicznej jest zależny od marki.
 
 ### Test proporcji
-Test proprcji w którym wykorzystano liczbę samochodów uszkodzonych oraz kraj pochodzenie.
-H0 - odsetek samochodów uszkodzonych jest niezależny od kraju pochodzenia.
+Test proporcji pozwala odpowiedzieć na pytanie czy odsetki w jednej, 
+dwóch lub więcej grupach różnią się od siebie istotnie. 
+
+Hipoteza:
+
+$H_0$ - odsetek pojazdów uszkodzonych jest niezależny od kraju pochodzenia,
+
+$H_1$ - odsetek pojazdów uszkodzonych jest zależny od kraju pochodzenia,
+
+Poziom istotności $\alpha = 0.05$.
 ```{r}
-vii_proporcja = database %>% group_by(database$KrajPochodzenia) %>% summarise(liczba = n());
-vii_proporcja$uszkodzonych = table(database$KrajPochodzenia, database$PojazdUszkodzony)[,2];
-vii_proporcja = vii_proporcja %>% filter(liczba > 500);
-vii_test = prop.test(x = vii_proporcja$uszkodzonych, n = vii_proporcja$liczba);
+vii_proporcja = database %>% group_by(KrajPochodzenia) %>% summarise(Liczebnosc = n());
+vii_proporcja$Uszkodzonych = table(database$KrajPochodzenia, database$PojazdUszkodzony)[,2];
+vii_proporcja$ProcentUszkodzonych = (vii_proporcja$Uszkodzonych / vii_proporcja$Liczebnosc) * 100;
+vii_proporcja = vii_proporcja %>% filter(Liczebnosc > 1000);
+
+ggplot(vii_proporcja, aes(y=KrajPochodzenia, x=ProcentUszkodzonych)) + 
+    geom_bar(position="dodge", stat="identity", fill="orange")+
+    ggtitle("Procent pojazdów uszkodzonych")
+
+vii_test = prop.test(x = vii_proporcja$Uszkodzonych, n = vii_proporcja$Liczebnosc);
 print(vii_test);
 ```
-### Zmienne ilościowe
-Testowanie normalności względem ceny, test pozwala na potwierdzenie tezy o normalności rozkładu.
-H0 -  doświadczenie ma rozkład normalny.
+Zgodnie z wynikiem testu mamy podstawy do odrzucenia hipotezy zerowej na korzyść 
+hipotezy alternatywnej -  odsetek pojazdów uszkodzonych jest zależny od kraju pochodzenia.
+
+## Zmienne ilościowe
+
+### Test normalności 
+Test umożliwia weryfikację czy cecha ma rozkłada normalny.
+
+Hipoteza:
+
+$H_0$ - cena pojazdów ma rozkład normalny,
+
+$H_1$ - cena pojazdów nie ma rozkładu normalnego,
+
+Poziom istotności $\alpha = 0.05$.
 ```{r}
 vii_test = ad.test(database$CenaPLN);
 print(vii_test);
 ggplot(database, aes(sample = CenaPLN)) +
   stat_qq() +
-  stat_qq_line();
+  stat_qq_line(color="red");
 ```
-Cena nie jest zmienną o rozkładzie normalnym.
+Zgodnie z wynikiem testu mamy podstawy do odrzucenia hipotezy zerowej na korzyść 
+hipotezy alternatywnej - cena pojazdów nie ma rozkładu normalnego.
 
-### Test Wilcoxona
-Ze względu na to, iż cena nie jest zmienną o rozkładzie normalnym. Wykorzystujemy nieparametryczny test Wilcoxona.
-H0 - średnia jest równa 34656.
+### Test średnich
+Ze względu na to, iż cena nie jest zmienną o rozkładzie normalnym. 
+Wykorzystujemy nieparametryczny test Wilcoxona.
+
+Hipoteza:
+
+$H_0$ - średnia jest równa 41000,
+
+$H_1$ - średnia nie jest równa 41000,
+
+Poziom istotności $\alpha = 0.05$.
 ```{r}
-wilcox.test(x = database$CenaPLN, mu = 34656)
+wilcox.test(x = database$CenaPLN, mu = 41000)
 ```
+Zgodnie z wynikiem testu mamy podstawy do odrzucenia hipotezy zerowej na korzyść 
+hipotezy alternatywnej - średnia nie jest równa 41000.
 
 # IX - Regresja liniowa i inne
 
