@@ -15,12 +15,15 @@ output:
 #install.packages("rgl")
 #install.packages("readxl")
 #install.packages("nortest")
+#install.packages("moments")
+#install.packages("psych")
+#install.packages("tinytex")
 
 library(dplyr)
 library(ggplot2)
 library(viridis)
-#library(tidyverse)
-#library(hrbrthemes)
+library(tidyverse)
+library(hrbrthemes)
 library(corrplot)
 library(tidymodels)
 library(rpart.plot)
@@ -28,6 +31,9 @@ library(rgl)
 library(readxl)
 library(nortest)
 library(patchwork)
+library(moments)
+library(psych)
+library(tinytex)
 ```
 
 \vspace*{1cm}
@@ -151,7 +157,33 @@ tail(database, N)
 
 
 # II - Wyznaczenie podstawowych statystyk
-W tej sekcji przedstawione zostaną podstawowe statystyki dla wybranych zmiennych.
+W tej sekcji przedstawione zostaną podstawowe statystyki dla wybranych zmiennych, które zostały użyte do 
+
+1. Miary położenia:
+Średnią arytmetyczną w próbce nazywamy miarę wyrażoną wzorem:
+
+$$\overline{x} = \frac{1}{n} \sum_{i=1}^{n} x_i$$
+Mediana jest to środkowa wartość danych, przedstawimy ja za pomocą wzoru
+
+$$\text{Mediana} = x_{\left(\frac{n+1}{2}\right)}$$
+$$\text{Mediana} = \frac{x_{\left(\frac{n}{2}\right)} + x_{\left(\frac{n}{2} + 1\right)}}{2}$$
+
+$$IQR=Q_3-Q_1$$
+
+$$R=x_{(n)}-x_{(1)}$$
+
+$$S^2=\frac{1}{n-1}\sum\limits_{i=1}^n(x_i-\overline{x})^2$$
+
+$$S=\sqrt{S^2}$$
+
+$$d=\frac{1}{n}\sum\limits_{i=1}^n|x_i-\overline{x}|$$
+
+$$V=\frac{S}{\overline{x}}$$
+
+Kwartyle służą do wyznaczania wartości, wokół której grupują się dane, przykładowo wyróżniamy następujące kwartyle:
+— pierwszy kwartyl Q1 - mediana grupy obserwacji mniejszych od Q2,
+— drugi kwartyl Q2 to mediana,
+— trzeci kwartyl Q3 - mediana grupy obserwacji większych od Q2
 
 ## Statystyki dla zmiennych nuemrycznych
 ```{r}
@@ -163,9 +195,45 @@ numerical_database = data.frame(database$CenaPLN,
 numerical_statistics = data.frame(do.call(cbind, lapply(numerical_database, summary)));
 numerical_statistics[nrow(numerical_statistics)+1,] = sapply(numerical_database, var);
 numerical_statistics[nrow(numerical_statistics)+1,] = sapply(numerical_database, sd);
-row.names(numerical_statistics)[7:8] <- c("Var","Sd");
+numerical_statistics[nrow(numerical_statistics) + 1, ] = sapply(numerical_database, function(x) sd(x) / mean(x))
+numerical_statistics[nrow(numerical_statistics) + 1, ] = sapply(numerical_database, skewness)
+numerical_statistics[nrow(numerical_statistics) + 1, ] = sapply(numerical_database, kurtosis)
+numerical_statistics[nrow(numerical_statistics) + 1, ] = sapply(numerical_database, harmonic.mean)
+numerical_statistics[nrow(numerical_statistics) + 1, ] = sapply(numerical_database, geometric.mean)
+row.names(numerical_statistics)[7:13] <- c("Var", "Sd", "CV", "Skewness", "Kurtosis", "HarmonicMean", "GeometricMean")
 numerical_statistics
 ```
+# Interpretacja danych dla CenaPLN
+
+Centrum rozkładu:
+Dane są niejednorodne i wyraźnie prawostronnie skośne, co potwierdza wysoka wartość mediany (26000), która lepiej odzwierciedla przeciętną wartość w porównaniu do średniej arytmetycznej (40848). Średnia jest silnie wpływana przez skrajne wartości, co sprawia, że jest zdecydowanie większa od mediany. Wartość średniej harmonicznego oraz średniej geometrycznej leży pomiędzy medianą a średnią arytmetyczną.
+```{r}
+t(numerical_statistics)[1,c(1:6,12,13)]
+```
+
+
+
+Miary rozproszenia:
+
+Rozstęp między wartościami minimalną i maksymalną jest bardzo duży (60266.69), co wskazuje na znaczną zmienność danych.
+Rozstęp międzykwartylowy (IQR) jest stosunkowo niski (4386.29), co sugeruje, że większość danych skupia się wokół mediany.
+Wysokie wartości odchylenia standardowego (51347.64) oraz odchylenia przeciętnego świadczą o dużym rozrzuceniu danych wokół średniej                  arytmetycznej.
+
+```{r}
+t(numerical_statistics)[1,c(7,8,9)]
+```
+
+Kształt rozkładu:
+
+Współczynnik zmienności (CV) wynoszący ponad 100% wskazuje na dużą zmienność danych.
+Skośność (Skewness) jest dodatnia (6.03), co potwierdza prawostronną skośność rozkładu.
+Kurtosis wynoszący 93.59 wskazuje na występowanie wartości skrajnych i grubszych "ogonów" rozkładu, co oznacza, że rozkład jest bardziej              spiętrzony wokół środka niż rozkład normalny.
+
+```{r}
+t(numerical_statistics)[1,c(10,11)]
+``` 
+Dane wykazują dużą zmienność, zdecydowaną prawostronną skośność oraz obecność wartości skrajnych. To sugeruje, że analizowane zjawisko nie jest równomiernie rozłożone i może być podatne na występowanie ekstremalnych wartości. Użycie średniej arytmetycznej jako miary centralnej może być mniej odpowiednie, gdyż jest silnie wpływana przez wartości skrajne. Mediana lepiej odzwierciedla przeciętną wartość w takich warunkach. Duża wartość współczynnika zmienności i kurtozy potwierdza istnienie dużej zmienności i obecność wartości skrajnych w badanych danych.
+
 ## Statystyki dla zmiennych dwumianowych
 ```{r}
 logical_database = data.frame(database$`LiczbaDrzwi4/5`, 
@@ -242,7 +310,7 @@ draw_boxplot = function(x, y_lab = "Wartość"){
 }
 
 draw_numerical = function(x, y_lab="Wartość"){
-  draw_histogram(x) |
+    draw_histogram(x) |
   draw_boxplot(x, y_lab) + plot_layout(ncol = 2);
 }
 
@@ -476,7 +544,7 @@ cat("Rozmiar macierzy:", vi_dim[1], "x", vi_dim[2]);
 vi_means = round(colMeans(vi_database), 3);
 cat(paste(names(vi_means), vi_means, sep = " : ", collapse = ",\n"))
 
-# Correlation  
+# Correlation 
 vi_corr_matrix = cor(vi_database);
 print(vi_corr_matrix)
 corrplot(vi_corr_matrix, order = "hclust", 
@@ -751,7 +819,7 @@ print(paste("Wartość odchylenia standardowego z próby:", round(vii_marka_sd,2
 
 ## Zmienne jakościowe
 
-### Test niezależności
+### Test niezależności 
 Za pomocą testu niezależności $\chi^2$ sprawdzona zostanie niezależność pomiędzy 
 Marką a udziałem w nich samochodów ze skrzynią mechaniczną.
 
