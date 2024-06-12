@@ -173,6 +173,10 @@ logical_database = data.frame(database$`LiczbaDrzwi4/5`,
                               database$SkrzyniaBiegowManualna);
 
 logical_statistics = data.frame(do.call(cbind, lapply(logical_database, summary)))[2:3,];
+logical_statistics = data.frame(Class = c("False", "True"),
+                                PojazdUszkodzony = as.double(logical_statistics$database.PojazdUszkodzony),
+                                SkrzyniaBiegowManualna = as.double(logical_statistics$database.SkrzyniaBiegowManualna),
+                                LiczbaDrzwi4_5 = as.double(logical_statistics$database..LiczbaDrzwi4.5.))
 logical_statistics
 ```
 
@@ -238,7 +242,6 @@ draw_boxplot = function(x, y_lab = "Wartość"){
 }
 
 draw_numerical = function(x, y_lab="Wartość"){
-  print(names(x));
   draw_histogram(x) |
   draw_boxplot(x, y_lab) + plot_layout(ncol = 2);
 }
@@ -247,60 +250,42 @@ draw_numerical = function(x, y_lab="Wartość"){
 
 ## Wykresy dla zmiennych nuemrycznych
 ```{r}
-sapply(numerical_database, draw_numerical)
+sapply(numerical_database, draw_numerical);
 ```
 
 
-## Statystyki dla zmiennych dwumianowych
+## Statystyki dla zmiennych jakościowych
 ```{r}
-logical_statistics
-
-
-ggplot(logical_statistics) + geom_bar(aes(y=database.PojazdUszkodzony))
-
-ggplot(logical_statistics, aes(x="", y=logical_statistics$database.PojazdUszkodzony, fill=c('True', 'F'))) +
+ggplot(logical_statistics, aes(x="", y=PojazdUszkodzony, fill=Class)) +
   geom_bar(stat="identity", width=1, color="white") +
-  coord_polar("y", start=0)
+  coord_polar("y", start=0) +
+  theme_void() + ggtitle("Pojazd uszkodzony");
 
-names(logical_statistics)
-rownames(logical_statistics)
-
-ggplot(logical_statistics, aes(x="", y=database.PojazdUszkodzony, fill=rownames(logical_statistics))) +
+ggplot(logical_statistics, aes(x="", y=SkrzyniaBiegowManualna, fill=Class)) +
   geom_bar(stat="identity", width=1, color="white") +
-  coord_polar("y", start=0)
+  coord_polar("y", start=0) +
+  theme_void() + ggtitle("Skrzynia manualna")
 
-ggplot(logical_statistics, aes(x="", y="database.SkrzyniaBiegowManualna", fill=rownames(logical_statistics))) +
+ggplot(logical_statistics, aes(x="", y=LiczbaDrzwi4_5, fill=Class)) +
   geom_bar(stat="identity", width=1, color="white") +
-  coord_polar("y", start=0) + theme_void();
+  coord_polar("y", start=0) +
+  theme_void() + ggtitle("Liczba drzwi 4/5")
 ```
 
 
 ```{r, message = FALSE}
-database %>% group_by(Marka) %>% summarise(liczbaSprzedanych = n(), 
+wzg_marka = database %>% group_by(Marka) %>% summarise(liczbaSprzedanych = n(), 
                                                     sredniaCena = mean(CenaPLN),
-                                                    medianaCena = median(CenaPLN))
+                                                    medianaCena = median(CenaPLN));
+
+ggplot(wzg_marka, aes(y=Marka, x=sredniaCena)) + 
+    geom_bar(position="dodge", stat="identity", fill="orange")+
+    ggtitle("Średnia cena sprzedaży dla marki")
+
+ggplot(wzg_marka, aes(y=Marka, x=liczbaSprzedanych)) + 
+    geom_bar(position="dodge", stat="identity", fill="lightblue")+
+    ggtitle("Liczba sprzedanych pojazdów")
 ```
-
-### Dane po eliminacją danych odstających
-```{r, message = FALSE}
-summarise(database,
-  srednia = mean(CenaPLN),
-  mediana = median(CenaPLN),
-  wariancja = var(CenaPLN),
-  odchylenieStd = sd(CenaPLN),
-  max = max(CenaPLN),
-  min = min(CenaPLN),
-)
-
-ggplot(data=database) + geom_histogram(aes(x=CenaPLN), bins = 50) + ggtitle("Histogram dla cen sprzedaży");
-
-ggplot(data=database) + geom_boxplot(aes(x=CenaPLN)) + ggtitle("Wykres pudełko-wąsy dla cen sprzedaży");
-
-ggplot(data=database, aes(sample = CenaPLN)) + stat_qq() + stat_qq_line(colour="red") + ylab("Kwantyl Teoretyczny") + xlab("Kwantyl Empiryczny") + 
-  ggtitle("Wykres QQ dla cen sprzedaży") + theme(axis.text.x = element_blank(), axis.text.y = element_blank()) ;
-```
-
-
 ```{r, message = FALSE}
 fuelType = database %>% group_by(database$RodzajPaliwa) %>% summarise(liczba = n());
 colnames(fuelType) = c("FuelType", "Count");
@@ -311,26 +296,7 @@ ggplot(fuelType, aes(x="", y=Count, fill=FuelType)) +
   geom_bar(stat="identity", width=1, color="white") +
   coord_polar("y", start=0) + theme_void();
 ```
-## Liczba koni mechanicznych samochodu
 
-
-```{r, message = FALSE}
-summarise(database,
-  srednia = mean(KM),
-  mediana = median(KM),
-  wariancja = var(KM),
-  odchylenieStd = sd(KM),
-  max = max(KM),
-  min = min(KM),
-)
-
-#upper_price_example = database[which(database$CenaPLN >= upper_bound),];
-#head(upper_price_example[order(upper_price_example$CenaPLN, decreasing = TRUE),])
-
-ggplot(data=database)+ geom_histogram(aes(x=KM), binwidth = 20) + ggtitle("Histogram dla KM")
-
-
-```
 
 # IV - Obserwacje odstające
 Obserwacja odstająca, element odstający – obserwacja relatywnie odległa od pozostałych elementów próby. 
