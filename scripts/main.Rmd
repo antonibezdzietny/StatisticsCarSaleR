@@ -910,9 +910,12 @@ wilcox.test(x = database$CenaPLN, mu = 41000)
 Zgodnie z wynikiem testu mamy podstawy do odrzucenia hipotezy zerowej na korzyść 
 hipotezy alternatywnej - średnia nie jest równa 41000.
 
-# IX - Regresja liniowa i inne
+# IX - Regresja liniowa oraz drzewa decyzyjna
 
 ## Modele dla jednej zmiennej
+Regresja liniowa umożliwia badanie zależności między zmienną zależną a 
+zmiennymi niezależnymi. Po określeniu modelu, funkcja zwraca szczegółowe 
+podsumowanie zawierające oszacowania współczynników, testy istotności.
 ```{r, message = FALSE}
 ix_database = select(filter(database, PojazdUszkodzony==FALSE & SkrzyniaBiegowManualna == TRUE), 
                      c("CenaPLN", "PrzebiegKm"))
@@ -924,21 +927,19 @@ abline(model, col="red")
 summary(model);
 print(model$coefficients);
 ```
-```{r, message = FALSE}
-ix_database = select(filter(database, PojazdUszkodzony==FALSE & SkrzyniaBiegowManualna == TRUE), 
-                     c("CenaPLN", "PojemnoscSkokowa"))
-model = lm(CenaPLN ~ . , data = ix_database)
-ix_sample = ix_database[sample(nrow(ix_database), size=1000),]
-plot(CenaPLN ~ PojemnoscSkokowa,  data=ix_sample, col = 'darkcyan')
-abline(model, col="red")
+W wyniki regresji uzyskano wzór: $CenaPLN  \approx -0.1115 PrzebigKM + 43817.4573$.
 
-summary(model);
-print(model$coefficients);
-```
 
 ## Modele dla 2 zmiennych
+UWAGA! - Wykres nie jest widoczny w pliku .pdf
+
+Do regresji dla dwuch zmiennych wykorzystano tylko pojazdy nieuszkodzone z 
+manualną skrzynią biegów, dla których wybrano następujące cechy 
+*PrzebiegKm* oraz *PojemnoscSkokowa*.
+
 ```{r, message = FALSE, rgl = TRUE}
-ix_database = select(filter(database, PojazdUszkodzony==FALSE & SkrzyniaBiegowManualna == TRUE), 
+ix_database = select(filter(database, PojazdUszkodzony==FALSE & 
+                                      SkrzyniaBiegowManualna == TRUE), 
                      c("CenaPLN", "PrzebiegKm", "PojemnoscSkokowa"))
 model = lm(CenaPLN ~ . , data = ix_database)
 
@@ -948,8 +949,10 @@ rglwidget()
 summary(model);
 print(model$coefficients);
 ```
+W wyniki regresji uzyskano wzór: $CenaPLN  \approx -0.1597 PrzebiegKm + 31.8533893 PojemnoscSkokowa -5537.7325$.
 
 ## Drzewa decyzyjne
+
 Drzewo decyzyjne to struktura drzewiasta, gdzie każdy węzeł wewnętrzny 
 reprezentuje test na pewnej zmiennej, każda gałąź reprezentuje wynik testu,
 a każdy liść reprezentuje decyzję lub wartość przewidywaną.
