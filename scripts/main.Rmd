@@ -429,72 +429,124 @@ cat("Ilość elementów odstających zgodnie z regułą odstępu międzykwartylo
 
 ### Dwumianowy
 ```{r}
-#Generowanie próbki
-set.seed(42)
-N <- 1000
-n <- 20
-p <- 0.4
-X <- rbinom(N, n, p)
+set.seed(42);
+N = 1e4; # Liczba próbek
+n <- 20;
+p <- 0.4;
 
-#Prawdopodobieństwa
-pbinom(8, n, p) - pbinom(7, n, p) # P(X=8) p. punktowe
-pbinom(10, n, p) # P(X<=10) p. przedziałowe
+# Prawdopodobieństwo punktowe
+print(paste("Prawdopodobieństwo dla punktu P(x=8)=", dbinom(8, n, p)));
 
-#Wykres gęstości
-a <- seq(0, n, by = 1)
-b <- dbinom(a, n, p)
-plot(a,b, type="h")
+# Prawdopodobieństwo przedzizłowe
+print(paste("Prawdopodobieństwo dla punktu P(x<10)=", pbinom(10, n,p)));
 
-#Wykres dystrybuanty
-a <- seq(0, n, by = 1)
-b <- pbinom(a, n, p)
-plot(a,b)
+# Wygenerowanie rozkładu gęstości
+x = seq(0, n, 1);
+dx = dbinom(x, n, p);
+
+# Wyznaczenie przedziału 
+n1<-seq(from=0, to=10, by=1)
+k1<-data.frame(x=n1, y=dbinom(n1, n, p))
+k1<-rbind(c(min(n1), 0), k1, c(max(n1), 0))
+
+# Wykres gęstości
+ggplot(data.frame(x=x, y=dx))+geom_point(aes(x=x, y=y))+labs(x="x",y="d(x)") +
+  ggtitle("Gęstość")+geom_point(data=k1, aes(x=x, y=y), col="yellow", fill="yellow", alpha=0.2);
+
+# Wykres dystrybuanty
+ggplot(data.frame(x=x, y=pbinom(q=x, n, p)))+geom_point(aes(x=x, y=y))+
+  labs(x="q",y="p(q)") + ggtitle("Dystrybuanta");
 ```
+
+
 ### Rozkład Poissona
 ```{r}
-#Generowanie próbki
-N <- 1000
-lambda <- 200
-X <- rpois(N, lambda)
+N = 1e4; # Liczba próbek
+lmb = 200; # Lambda
 
-#Prawdopodobieństwa
-ppois(190, lambda) - ppois(189, lambda) # P(X=190)
-ppois(190, lambda) #(P<=190)
+# Prawdopodobieństwo punktowe
+print(paste("Prawdopodobieństwo dla punktu P(x=180)=", dpois(180, lambda = lmb)));
 
-#Wykres gęstości
-a <- seq(min(X), max(X), by = 1)
-b <- dpois(a, lambda)
-plot(a,b, type="h")
+# Prawdopodobieństwo przedzizłowe
+print(paste("Prawdopodobieństwo dla punktu P(180<x<220)=", ppois(220, lmb)-ppois(180, lmb)));
 
-#Wykres dystrybuanty
-a <- seq(min(X), max(X), by = 1)
-b <- ppois(a, lambda)
-plot(a,b)
+# Wygenerowanie rozkładu gęstości
+x = seq(0, 2*lmb, 1);
+dx = dpois(x, lmb);
+
+# Wyznaczenie przedziału 
+n1<-seq(from=180, to=220, by=1)
+k1<-data.frame(x=n1, y=dpois(n1, lmb))
+k1<-rbind(c(min(n1), 0), k1, c(max(n1), 0))
+
+# Wykres gęstości
+ggplot(data.frame(x=x, y=dx))+geom_point(aes(x=x, y=y))+labs(x="x",y="d(x)") +
+  ggtitle("Gęstość")+geom_point(data=k1, aes(x=x, y=y), col="yellow", fill="yellow", alpha=0.2);
+
+# Wykres dystrybuanty
+ggplot(data.frame(x=x, y=ppois(q=x, lmb)))+geom_line(aes(x=x, y=y))+
+  labs(x="q",y="p(q)") + ggtitle("Dystrybuanta");
 ```
 
 ## Rozkłady ciągłe 
 
 ### Rozkład normalny
 ```{r}
-#Generowanie próbki
-N <- 1000
-mu <- 7 # średnia
-sigma <- 10 # odchylenie standardowe
-X <- rnorm(N, mu, sigma)
+N = 1e4; # Liczba próbek
+mu = 10; # Srednia
+sd = 5 ; # Odchylenie 
 
-#Prawdopodobieństwa
-#Prawd. punktowe w rozkładzie ciągłym = 0
-pnorm(10, mu, sigma) # P(X<=10) p. przedziałowe
+# Prawdopodobieństwo punktowe
+print(paste("Prawdopodobieństwo dla punktu P(x=8)=", dnorm(8, mean = mu, sd = sd)));
 
-#Wykres gęstości
-a <- seq(min(X), max(X), by = 0.5)
-b <- dnorm(a, mu, sigma)
-plot(a,b, type="h")
+# Prawdopodobieństwo przedzizłowe
+print(paste("Prawdopodobieństwo dla punktu P(8<x<10)=", pnorm(10, mean = mu, sd = sd)-pnorm(8, mean = mu, sd = sd)));
 
-#Wykres dystrybuanty
-a <- seq(min(X), max(X), by = 0.5)
-b <- pnorm(a, mu, sigma)
-plot(a,b)
+# Wygenerowanie rozkładu gęstości
+x = seq(mu-5*sd, mu+5*sd, length.out=1e4);
+dx = dnorm(x = x, mean = mu, sd = sd);
+
+# Wyznaczenie przedziału 
+n1<-seq(from=8, to=10, by=0.01)
+k1<-data.frame(x=n1, y=dnorm(n1, mean = mu, sd = sd))
+k1<-rbind(c(min(n1), 0), k1, c(max(n1), 0))
+
+# Wykres gęstości
+ggplot(data.frame(x=x, y=dx))+geom_line(aes(x=x, y=y))+labs(x="x",y="d(x)") +
+  ggtitle("Gęstość")+geom_polygon(data=k1, aes(x=x, y=y), col="yellow", fill="yellow", alpha=0.2);
+
+# Wykres dystrybuanty
+ggplot(data.frame(x=x, y=pnorm(q=x, mean = mu, sd = sd)))+geom_line(aes(x=x, y=y))+
+  labs(x="q",y="p(q)") + ggtitle("Dystrybuanta");
+```
+### Rozkład beta
+```{r}
+N = 1e4; # Liczba próbek
+a = 2; # Alpha
+b = 5; # Beta 
+
+# Prawdopodobieństwo punktowe
+print(paste("Prawdopodobieństwo dla punktu P(x=0.8)=", dbeta(0.8, a, b)));
+
+# Prawdopodobieństwo przedzizłowe
+print(paste("Prawdopodobieństwo dla punktu P(0.6<x<1.0)=", pbeta(1., a, b)-pbeta(0.6, a, b)));
+
+# Wygenerowanie rozkładu gęstości
+x = seq(0, 1, length.out=1e4);
+dx = dbeta(x, a, b);
+
+# Wyznaczenie przedziału 
+n1<-seq(from=0.6, to=1.0, by=0.01)
+k1<-data.frame(x=n1, y=dbeta(n1, a, b))
+k1<-rbind(c(min(n1), 0), k1, c(max(n1), 0))
+
+# Wykres gęstości
+ggplot(data.frame(x=x, y=dx))+geom_line(aes(x=x, y=y))+labs(x="x",y="d(x)") +
+  ggtitle("Gęstość")+geom_polygon(data=k1, aes(x=x, y=y), col="yellow", fill="yellow", alpha=0.2);
+
+# Wykres dystrybuanty
+ggplot(data.frame(x=x, y=pbeta(x, a, b)))+geom_line(aes(x=x, y=y))+
+  labs(x="q",y="p(q)") + ggtitle("Dystrybuanta");
 ```
 
 
@@ -816,6 +868,12 @@ print(paste("Wartość odchylenia standardowego z próby:", round(vii_marka_sd,2
 
 
 # VIII - Testowanie hipotez
+Testowanie hipotez w statystyce polega na weryfikacji, czy dane podtwierdzają
+określoną hipotezę badawczą, przy jednoczesnym uwzględnieniu ryzyka popełnienia 
+błędu. Procedura ta obejmuje sformułowanie hipotezy zerowej (H0) i 
+alternatywnej (H1), obliczenie odpowiedniego testu, a następnie wyniku z 
+wartością krytyczną, aby zdecydować o odrzuceniu lub nieodrzuceniu H0.
+
 
 ## Zmienne jakościowe
 
@@ -892,6 +950,7 @@ ggplot(database, aes(sample = CenaPLN)) +
 ```
 Zgodnie z wynikiem testu mamy podstawy do odrzucenia hipotezy zerowej na korzyść 
 hipotezy alternatywnej - cena pojazdów nie ma rozkładu normalnego.
+Jak można zaobserwować na wykresie QQ - zmienna odbiega od rozkładu normalnego.
 
 ### Test średnich
 Ze względu na to, iż cena nie jest zmienną o rozkładzie normalnym. 
