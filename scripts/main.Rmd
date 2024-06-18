@@ -22,8 +22,8 @@ output:
 library(dplyr)
 library(ggplot2)
 library(viridis)
-library(tidyverse)
-library(hrbrthemes)
+#library(tidyverse)
+#library(hrbrthemes)
 library(corrplot)
 library(tidymodels)
 library(rpart.plot)
@@ -950,9 +950,22 @@ print(model$coefficients);
 ```
 
 ## Drzewa decyzyjne
+Drzewo decyzyjne to struktura drzewiasta, gdzie każdy węzeł wewnętrzny 
+reprezentuje test na pewnej zmiennej, każda gałąź reprezentuje wynik testu,
+a każdy liść reprezentuje decyzję lub wartość przewidywaną.
+
+Proces budowy drzewa decyzyjnego polega na rekurencyjnym dzieleniu zbioru
+danych na podzbiory, które stają się coraz bardziej jednorodne pod względem 
+zmiennej docelowej. 
+
+Drzewa decyzyjne wykorzystane zostaną do analizy czynników wpływających na cenę 
+sprzedaży. Do nauki wykorzystano tylko pojazdy nieuszkodzone z manualną skrzynią 
+biegów, dla których wybrano następujące cechy *RokProdukcji*, *KM* oraz *PrzebiegKm*.
+
 ```{r, message = FALSE}
-ix_database = select(filter(database, PojazdUszkodzony==FALSE & SkrzyniaBiegowManualna == TRUE), 
-                     c("CenaPLN", "RokProdukcji", "PojemnoscSkokowa"))
+ix_database = select(filter(database, PojazdUszkodzony==FALSE & 
+                                      SkrzyniaBiegowManualna == TRUE), 
+                     c("CenaPLN", "RokProdukcji", "KM", "PrzebiegKm"))
 ix_data_split = initial_split(ix_database, prop = 0.75);
 ix_train_data <- training(ix_data_split);
 ix_test_data <- testing(ix_data_split);
@@ -975,5 +988,8 @@ model_performance <- ix_test_data %>%
 
 print(model_performance)
 
-rpart.plot(tree_fit$fit, type = 5, extra = 101, under = TRUE, cex = 0.8, box.palette = "auto")
+rpart.plot(tree_fit$fit, type = 5, extra = 101, under = TRUE, cex = 0.8, 
+           box.palette = "auto", roundint=FALSE)
 ```
+Jak można zaobserwować, głównymi czynnikami determinującymi cenę są 
+*RokProdukcji* -> *KM* -> *PrzebiegKM*.
