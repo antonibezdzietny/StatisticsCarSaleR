@@ -2,6 +2,7 @@
 output:
   pdf_document: default
   html_document: default
+  word_document: default
 ---
 ```{r, echo=FALSE, include=FALSE}
 #install.packages("dplyr")
@@ -18,12 +19,14 @@ output:
 #install.packages("moments")
 #install.packages("psych")
 #install.packages("tinytex")
+#install.packages("kableExtra")
+#install.packages("webshot2")
 
 library(dplyr)
 library(ggplot2)
 library(viridis)
-#library(tidyverse)
-#library(hrbrthemes)
+library(tidyverse)
+library(hrbrthemes)
 library(corrplot)
 library(tidymodels)
 library(rpart.plot)
@@ -34,34 +37,33 @@ library(patchwork)
 library(moments)
 library(psych)
 library(tinytex)
+library(kableExtra)
+library(webshot2)
 ```
 
-\vspace*{1cm}
+\vspace*{5cm}
 
 \begin{center}
-  \textbf{Statystyka matematyczna i ekonometria}
+  \Huge \textbf{Statystyka matematyczna i ekonometria}
 
-
-  \vspace{0.5cm}
-
-  Projekt - Auto Sprzedam
-
-            
   \vspace{2cm}
 
-  \textbf{Autorzy} \\ 
+  \LARGE Projekt - Auto Sprzedam
+
+  \vspace{3cm}
+
+  \Large \textbf{Autorzy} \\ 
   Anna Kalitka (255445) \\
   Antoni Bezdzietny (249327)
 
-  \vfill
-            
-  Projekt zaliczeniowy\\
+  \vspace{4cm}
+
+  \Large Projekt zaliczeniowy \\
   Laboratorium, lato 2023/24
   
-  \vspace{2cm}
-  
-\end{center}            
+\vspace {4cm}
 
+\end{center}  
 
 # I - Opis bazy danych
   Wybrana została baza danych **AutoSprzedam**. Baza pochodzi z zasobów ePortalu.
@@ -88,23 +90,19 @@ library(tinytex)
   | PojazdUszkodzony   | string     | Informacja czy pojazd jest uszkodzony (Tak/Nie).                                          |
   | SkrzyniaBiegow     | string     | Typ skrzyni biegów w samochodzie (manualna, automatyczna).                                |
   </p>
-  
-
+ \newpage 
 ## Prezentacja bazy danych
 ```{r}
 # Wczytanie bazy danych
 database = read.csv("../database/AutoSprzedam.dat", sep = "\t", dec = ',');
-
 cat("Liczba rekordów:", nrow(database), ", liczba kolumn:", ncol(database), "\n")
-
 N = 5;
-cat("-", "Przykład ", N, "pierwszych rekordów.\n")
+  cat("-", "Przykład ", N, "pierwszych rekordów.\n") 
 head(database, N)
-
-cat("- ", "Przykład ", N, "ostatnich rekordów.\n")
-tail(database, N)
+  cat("- ", "Przykład ", N, "ostatnich rekordów.\n") 
+  tail(database, N)
 ```
-
+\newpage
 ## Przygotowanie bazy danych
   Przed przejściem do dalszej pracy z bazą danych postanowiono wprowadzenie zmian w jej strukturze, 
   których celem jest uproszczenie przyszłych prac z danymi.
@@ -144,7 +142,7 @@ W związku z powyższym można analogicznie przekształcić typ danych na typ *b
 database$LiczbaDrzwi = database$LiczbaDrzwi == "4/5";
 colnames(database)[6] = "LiczbaDrzwi4/5"
 ```
-
+\newpage
 ## Prezentacja bazy danych - po wprowadzonych zmianach
 ```{r}
 N = 5;
@@ -154,77 +152,99 @@ head(database, N)
 cat("- ", "Przykład ", N, "ostatnich rekordów.\n")
 tail(database, N)
 ```
-
-
+\newpage
 # II - Wyznaczenie podstawowych statystyk
-W tej sekcji przedstawione zostaną podstawowe statystyki dla wybranych zmiennych, które zostały użyte do 
+W tej sekcji przedstawione zostaną podstawowe statystyki dla wybranych zmiennych, które zostały użyte w tym projekcie.
 
-1. Miary położenia:
-Średnią arytmetyczną w próbce nazywamy miarę wyrażoną wzorem:
-
+\textbf {Miary położenia} :\
+- Średnią arytmetyczną w próbce nazywamy miarę wyrażoną wzorem:
 $$\overline{x} = \frac{1}{n} \sum_{i=1}^{n} x_i$$
-Mediana jest to środkowa wartość danych, przedstawimy ja za pomocą wzoru
-
+- Średnia harmoniczna jest odwrotnością średniej arytmetycznej, gdzie dla szeregu szczegółowego obliczamy ze wzoru: 
+$$\frac{n}{\sum_{i=1}^{n} \frac{1}{x_i}}$$
+- Średnia geometryczna pozwala na ocenę przeciętnej cechy mierzalnej w zbiorowości statystycznej i przedstawia się wzorem:
+$$\sqrt[n]{x_1 \cdot x_2 \cdot \ldots \cdot x_n}$$
+- Mediana jest to środkowa wartość danych, przedstawimy ja za pomocą wzoru:
+a) dla n nieparzystych
 $$\text{Mediana} = x_{\left(\frac{n+1}{2}\right)}$$
+b) dla n parzystych
 $$\text{Mediana} = \frac{x_{\left(\frac{n}{2}\right)} + x_{\left(\frac{n}{2} + 1\right)}}{2}$$
+- Kwartyle służą do wyznaczania wartości, wokół której grupują się dane, przykładowo wyróżniamy następujące kwartyle:
+  + pierwszy kwartyl Q1 - mediana grupy obserwacji mniejszych od Q2,
+  + drugi kwartyl Q2 to mediana,
+  + trzeci kwartyl Q3 - mediana grupy obserwacji większych od Q2
+ 
 
+\textbf {Miary rozproszenia} :\
+- Rozstęp międzykwartylowy jest to różnica między trzecim a pierwszym kwartylem:
 $$IQR=Q_3-Q_1$$
-
+- Rozstęp jest różnicą między wartością maksymalną a minimalną:
 $$R=x_{(n)}-x_{(1)}$$
-
+- Wariancję przedstawiamy wzorem:
 $$S^2=\frac{1}{n-1}\sum\limits_{i=1}^n(x_i-\overline{x})^2$$
-
+- Odchylenie standardowe jest to pierwiastek z wariancji:
 $$S=\sqrt{S^2}$$
-
+- Odchylenie przeciętne od wartości średniej obliczamy ze wzoru:
 $$d=\frac{1}{n}\sum\limits_{i=1}^n|x_i-\overline{x}|$$
-
+- Współczynnik zmienności jest to parametr określający miarę zróżnicowania próby:
 $$V=\frac{S}{\overline{x}}$$
-
-Kwartyle służą do wyznaczania wartości, wokół której grupują się dane, przykładowo wyróżniamy następujące kwartyle:
-— pierwszy kwartyl Q1 - mediana grupy obserwacji mniejszych od Q2,
-— drugi kwartyl Q2 to mediana,
-— trzeci kwartyl Q3 - mediana grupy obserwacji większych od Q2
+\newpage
 
 ## Statystyki dla zmiennych nuemrycznych
+
 ```{r}
-numerical_database = data.frame(database$CenaPLN, 
-                                database$KM, 
-                                database$PojemnoscSkokowa, 
-                                database$PrzebiegKm, 
+numerical_database = data.frame(database$CenaPLN, database$KM, 
+                                database$PojemnoscSkokowa, database$PrzebiegKm, 
                                 database$RokProdukcji);
 numerical_statistics = data.frame(do.call(cbind, lapply(numerical_database, summary)));
-numerical_statistics[nrow(numerical_statistics)+1,] = sapply(numerical_database, var);
-numerical_statistics[nrow(numerical_statistics)+1,] = sapply(numerical_database, sd);
-numerical_statistics[nrow(numerical_statistics) + 1, ] = sapply(numerical_database, function(x) sd(x) / mean(x))
-numerical_statistics[nrow(numerical_statistics) + 1, ] = sapply(numerical_database, skewness)
-numerical_statistics[nrow(numerical_statistics) + 1, ] = sapply(numerical_database, kurtosis)
-numerical_statistics[nrow(numerical_statistics) + 1, ] = sapply(numerical_database, harmonic.mean)
-numerical_statistics[nrow(numerical_statistics) + 1, ] = sapply(numerical_database, geometric.mean)
-row.names(numerical_statistics)[7:13] <- c("Var", "Sd", "CV", "Skewness", "Kurtosis", "HarmonicMean", "GeometricMean")
-numerical_statistics
+numerical_statistics[nrow(numerical_statistics)+1,] = 
+  sapply(numerical_database, var);
+numerical_statistics[nrow(numerical_statistics)+1,] = 
+  sapply(numerical_database, sd);
+numerical_statistics[nrow(numerical_statistics) + 1, ] = 
+  sapply(numerical_database, function(x) sd(x) / mean(x))
+numerical_statistics[nrow(numerical_statistics) + 1, ] = 
+  sapply(numerical_database, skewness)
+numerical_statistics[nrow(numerical_statistics) + 1, ] = 
+  sapply(numerical_database, kurtosis)
+numerical_statistics[nrow(numerical_statistics) + 1, ] = 
+  sapply(numerical_database, harmonic.mean)
+numerical_statistics[nrow(numerical_statistics) + 1, ] = 
+  sapply(numerical_database, geometric.mean)
+row.names(numerical_statistics)[7:13] <- c("Var", "Sd", "CV", "Skewness", "Kurtosis", 
+                                           "HarmonicMean", "GeometricMean")
+colnames(numerical_statistics) <- c("CenaPLN", "KM", "PojemnoscSkokowa", "PrzebiegKm", "RokProdukcji")
+numerical_statistics[,-ncol(numerical_statistics)] <- 
+  lapply(numerical_statistics[,-ncol(numerical_statistics)], function(x) 
+  format(x, scientific = TRUE, digits = 2))
+#numerical_statistics
+numerical_statistics %>%
+kable("latex") %>%
+kable_styling(full_width = FALSE, 
+             bootstrap_options = c("striped", "hover", "condensed", "responsive"), 
+                position = "center") %>%
+  add_header_above(c("Miary","Statystyki"=5)) %>%
+  row_spec(0, bold = TRUE, background = "#006400", color = "white") %>%
+ column_spec(1:5, border_right = TRUE)
+
 ```
 # Interpretacja danych dla CenaPLN
 
-Centrum rozkładu:
+\textbf {Centrum rozkładu:}\
 Dane są niejednorodne i wyraźnie prawostronnie skośne, co potwierdza wysoka wartość mediany (26000), która lepiej odzwierciedla przeciętną wartość w porównaniu do średniej arytmetycznej (40848). Średnia jest silnie wpływana przez skrajne wartości, co sprawia, że jest zdecydowanie większa od mediany. Wartość średniej harmonicznego oraz średniej geometrycznej leży pomiędzy medianą a średnią arytmetyczną.
 ```{r}
 t(numerical_statistics)[1,c(1:6,12,13)]
+
 ```
-
-
-
-Miary rozproszenia:
-
+\textbf {Miary rozproszenia:}\
 Rozstęp między wartościami minimalną i maksymalną jest bardzo duży (60266.69), co wskazuje na znaczną zmienność danych.
 Rozstęp międzykwartylowy (IQR) jest stosunkowo niski (4386.29), co sugeruje, że większość danych skupia się wokół mediany.
 Wysokie wartości odchylenia standardowego (51347.64) oraz odchylenia przeciętnego świadczą o dużym rozrzuceniu danych wokół średniej                  arytmetycznej.
 
 ```{r}
 t(numerical_statistics)[1,c(7,8,9)]
+
 ```
-
-Kształt rozkładu:
-
+\textbf {Kształt rozkładu:}\
 Współczynnik zmienności (CV) wynoszący ponad 100% wskazuje na dużą zmienność danych.
 Skośność (Skewness) jest dodatnia (6.03), co potwierdza prawostronną skośność rozkładu.
 Kurtosis wynoszący 93.59 wskazuje na występowanie wartości skrajnych i grubszych "ogonów" rozkładu, co oznacza, że rozkład jest bardziej              spiętrzony wokół środka niż rozkład normalny.
@@ -232,9 +252,12 @@ Kurtosis wynoszący 93.59 wskazuje na występowanie wartości skrajnych i grubsz
 ```{r}
 t(numerical_statistics)[1,c(10,11)]
 ``` 
+\textbf {Wniosek ogólny:}\
 Dane wykazują dużą zmienność, zdecydowaną prawostronną skośność oraz obecność wartości skrajnych. To sugeruje, że analizowane zjawisko nie jest równomiernie rozłożone i może być podatne na występowanie ekstremalnych wartości. Użycie średniej arytmetycznej jako miary centralnej może być mniej odpowiednie, gdyż jest silnie wpływana przez wartości skrajne. Mediana lepiej odzwierciedla przeciętną wartość w takich warunkach. Duża wartość współczynnika zmienności i kurtozy potwierdza istnienie dużej zmienności i obecność wartości skrajnych w badanych danych.
+\newpage
 
 ## Statystyki dla zmiennych dwumianowych
+
 ```{r}
 logical_database = data.frame(database$`LiczbaDrzwi4/5`, 
                               database$PojazdUszkodzony, 
@@ -247,9 +270,13 @@ logical_statistics = data.frame(Class = c("False", "True"),
                                 LiczbaDrzwi4_5 = as.double(logical_statistics$database..LiczbaDrzwi4.5.))
 logical_statistics
 ```
-
+\textbf {Wniosek:}\ 
+Zdecydowana większość pojazdów w próbie jest nieuszkodzona.
+W kategorii pojazdów z manualną skrzynią biegów i z 4-5 drzwiami, uszkodzone pojazdy stanowią znaczną większość.
+Pojazdy z manualną skrzynią biegów i z większą liczbą drzwi mogą być bardziej narażone na uszkodzenia lub też w tych kategoriach pojazdy uszkodzone stanowią większą część próby.
 
 ## Statystyki dla pozostałych zmiennych (jakościowych)
+
 ```{r}
 quality_database = data.frame(database$Marka, 
                               database$RodzajPaliwa, 
@@ -258,10 +285,32 @@ quality_database = data.frame(database$Marka,
 
 sapply(quality_database, function (x){
   round(sort(table(x), decreasing = TRUE) / nrow(quality_database) , 3)})
+
 ```
+```{r}
+``` 
+\textbf {Wnioski do Marek:}\
+        Najpopularniejszą marką jest Volkswagen, stanowiący 15.1% pojazdów.
+        Ford i Opel są kolejnymi popularnymi markami, z udziałami odpowiednio 13.2% i 12.2%.
+        Widać dużą różnorodność marek, z dziesięcioma najpopularniejszymi markami obejmującymi większość rynku.
+        
+\textbf {Wnioski napęd:}\
+        Olej napędowy (diesel) jest dominującym rodzajem paliwa, stanowiącym 68% pojazdów.
+        Paliwa alternatywne, takie jak hybrydy, benzyna+CNG i napęd elektryczny, stanowią bardzo mały procent (mniej niż 1%).
+        
+\textbf {Wnioski Kolor:}\
+        Najczęściej wybieranym kolorem jest srebrny-metallic (25.2%), a następnie czarny-metallic (19.1%).
+        Kolory metaliczne, zwłaszcza srebrny i czarny, są bardzo popularne, co może sugerować preferencje klientów do bardziej eleganckiego wyglądu.
+        
+\textbf {Wnioski kraj pochodzenia:}\
+        Niemcy są dominującym krajem pochodzenia pojazdów, z 39.8% udziałem.
+        Polska zajmuje drugie miejsce z 29.8% udziałem, co może wskazywać na dużą liczbę pojazdów produkowanych lub importowanych z Polski.        
 
-
-
+\textbf {Ogólne wnioski:}\
+        Dane wskazują na preferencje rynku dotyczące określonych marek (głównie niemieckich), typów paliwa (przede wszystkim diesel) oraz kolorów (metalicznych).
+        Niemieckie marki i pojazdy pochodzenia niemieckiego są najbardziej popularne.
+        Bardzo mały udział pojazdów hybrydowych, na CNG oraz elektrycznych wskazuje na niewielkie zainteresowanie tymi bardziej ekologicznymi opcjami.
+\newpage
 
 # III - Graficzna prezentacja danych
 ```{r, include=FALSE}
@@ -284,14 +333,14 @@ draw_histogram = function(x){
                  colour = 'red3', fill = 'red2', bins = 50) +
     geom_density(aes(x=x), lwd = 1, colour = 4,
                fill = 4, alpha = 0.25) + labs(x = "Wartość", y = "Gęstość") +
-    ggtitle("Histogram oraz gęstość wszystkie dane");
+    ggtitle("Histogram oraz gęstość /n wszystkie dane");
 
   h2 = ggplot() + 
     geom_histogram(aes(x=interquartile_range(x), y = after_stat(density)), 
                  colour = 'red3', fill = 'red2', bins = 50) +
     geom_density(aes(x=interquartile_range(x)), lwd = 1, colour = 4,
                fill = 4, alpha = 0.25) + labs(x = "Wartość", y = "Gęstość") +
-    ggtitle("Histogram oraz gęstość odrzucone skrajne");
+    ggtitle("Histogram oraz gęstość /n odrzucone skrajne");
   
   return(h1/h2)
 }
@@ -321,25 +370,36 @@ draw_numerical = function(x, y_lab="Wartość"){
 sapply(numerical_database, draw_numerical);
 ```
 
+\newpage
+## Statystyki dla zmiennych jakościowych/ Wykresy kołowy - uszkodzenia, typ skrzyni, liczba drzwi
 
-## Statystyki dla zmiennych jakościowych
+Wnioski do wykresów zostały zawarte w częciści "Statystyki dla zmiennych dwumianowych"
+
 ```{r}
 ggplot(logical_statistics, aes(x="", y=PojazdUszkodzony, fill=Class)) +
   geom_bar(stat="identity", width=1, color="white") +
   coord_polar("y", start=0) +
-  theme_void() + ggtitle("Pojazd uszkodzony");
+  theme_void() +
+  geom_text(aes(label=PojazdUszkodzony), position=position_stack(vjust=0.5)) +
+  ggtitle("Pojazd uszkodzony")
 
 ggplot(logical_statistics, aes(x="", y=SkrzyniaBiegowManualna, fill=Class)) +
   geom_bar(stat="identity", width=1, color="white") +
   coord_polar("y", start=0) +
-  theme_void() + ggtitle("Skrzynia manualna")
+  theme_void() +
+  geom_text(aes(label=SkrzyniaBiegowManualna), position=position_stack(vjust=0.5)) +
+  ggtitle("Skrzynia manualna")
 
 ggplot(logical_statistics, aes(x="", y=LiczbaDrzwi4_5, fill=Class)) +
   geom_bar(stat="identity", width=1, color="white") +
   coord_polar("y", start=0) +
-  theme_void() + ggtitle("Liczba drzwi 4/5")
+  theme_void() +
+  geom_text(aes(label=LiczbaDrzwi4_5), position=position_stack(vjust=0.5)) +
+  ggtitle("Liczba drzwi 4/5")
 ```
+\newpage
 
+# Wykresy słupkowe
 
 ```{r, message = FALSE}
 wzg_marka = database %>% group_by(Marka) %>% summarise(liczbaSprzedanych = n(), 
@@ -353,7 +413,24 @@ ggplot(wzg_marka, aes(y=Marka, x=sredniaCena)) +
 ggplot(wzg_marka, aes(y=Marka, x=liczbaSprzedanych)) + 
     geom_bar(position="dodge", stat="identity", fill="lightblue")+
     ggtitle("Liczba sprzedanych pojazdów")
+
+wzg_marka
 ```
+\textbf {Ogólne wnioski:}\
+Marki takie jak Ford, Renault, Opel oraz Peugeot mają znaczną liczbę sprzedanych pojazdów (powyżej 3000), co może sugerować ich dużą popularność na rynku.
+
+Marki takie jak Audi, BMW, Mercedes-Benz oraz Toyota wyróżniają się wysokimi średnimi i medianami cen, co sugeruje, że oferują one pojazdy z wyższej półki cenowej. Dla przykładu, Audi i BMW mają średnie ceny sprzedaży przekraczające 85 000 zł, podczas gdy mediana cen wynosi odpowiednio 52 800 zł i 56 900 zł.
+
+Fiat wyróżnia się najniższą średnią i medianą ceną sprzedaży spośród wszystkich marek, co może wskazywać na ofertę pojazdów bardziej przystępnych cenowo.
+
+Skoda i Toyota mają relatywnie wysokie średnie i mediany cen, co może sugerować, że oferują one pojazdy w średniej do wysokiej półce cenowej, podobnie jak Audi, BMW i Mercedes-Benz.
+
+Różnice w liczbie sprzedanych pojazdów oraz cenach wskazują na zróżnicowane preferencje konsumentów na rynku samochodowym. Niektóre marki mogą być bardziej cenione ze względu na swoje cechy, reputację czy oferowane technologie.
+
+## Statystyki dla zmiennych jakościowych/ Wykresy kołowy - napęd
+
+Wnioski do wykresów zostały zawarte w częciści "Statystyki dla zmiennych dwumianowych"
+
 ```{r, message = FALSE}
 fuelType = database %>% group_by(database$RodzajPaliwa) %>% summarise(liczba = n());
 colnames(fuelType) = c("FuelType", "Count");
