@@ -227,7 +227,7 @@ kable_styling(full_width = FALSE,
  column_spec(1:5, border_right = TRUE)
 
 ```
-# Interpretacja danych dla CenaPLN
+### Interpretacja danych dla CenaPLN
 
 \textbf {Centrum rozkładu:}\
 Dane są niejednorodne i wyraźnie prawostronnie skośne, co potwierdza wysoka wartość mediany (26000), która lepiej odzwierciedla przeciętną wartość w porównaniu do średniej arytmetycznej (40848). Średnia jest silnie wpływana przez skrajne wartości, co sprawia, że jest zdecydowanie większa od mediany. Wartość średniej harmonicznego oraz średniej geometrycznej leży pomiędzy medianą a średnią arytmetyczną.
@@ -366,6 +366,7 @@ draw_numerical = function(x, y_lab="Wartość"){
 ```
 
 ## Wykresy dla zmiennych nuemrycznych
+Wnioski do wykresów zostały zawarte w częciści "Statystyki dla zmiennych nuemrycznych dla Cena PLN"
 ```{r}
 sapply(numerical_database, draw_numerical);
 ```
