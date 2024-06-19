@@ -481,7 +481,7 @@ k1<-rbind(c(min(n1), 0), k1, c(max(n1), 0))
 
 # Wykres gęstości
 ggplot(data.frame(x=x, y=dx))+geom_point(aes(x=x, y=y))+labs(x="x",y="d(x)") +
-  ggtitle("Gęstość")+geom_point(data=k1, aes(x=x, y=y), col="yellow", fill="yellow", alpha=0.2);
+  ggtitle("Gęstość")+geom_polygon(data=k1, aes(x=x, y=y), col="yellow", fill="yellow", alpha=0.2);
 
 # Wykres dystrybuanty
 ggplot(data.frame(x=x, y=ppois(q=x, lmb)))+geom_line(aes(x=x, y=y))+
@@ -547,30 +547,6 @@ ggplot(data.frame(x=x, y=dx))+geom_line(aes(x=x, y=y))+labs(x="x",y="d(x)") +
 # Wykres dystrybuanty
 ggplot(data.frame(x=x, y=pbeta(x, a, b)))+geom_line(aes(x=x, y=y))+
   labs(x="q",y="p(q)") + ggtitle("Dystrybuanta");
-```
-
-
-### Rozkład Beta
-```{r}
-#Generowanie próbki
-N <- 1000
-alpha <- 0.5
-beta <- 0.5
-X <- rbeta(N, alpha, beta)
-
-#Prawdopodobieństwa
-#Prawd. punktowe w rozkładzie ciągłym = 0
-pbeta(0.7, alpha, beta) # P(X<=0.7) p. przedziałowe
-
-#Wykres gęstości
-a <- seq(0, 1, by = 0.02)
-b <- dbeta(a, alpha, beta)
-plot(a,b, type="h")
-
-#Wykres dystrybuanty
-a <- seq(0, 1, by = 0.02)
-b <- pbeta(a, alpha, beta)
-plot(a,b)
 ```
 
 
